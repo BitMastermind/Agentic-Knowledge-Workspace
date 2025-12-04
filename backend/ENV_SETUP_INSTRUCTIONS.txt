@@ -1,0 +1,107 @@
+═══════════════════════════════════════════════════════════════════════
+  GEMINI CONFIGURATION - MANUAL .ENV SETUP
+═══════════════════════════════════════════════════════════════════════
+
+Since .env files are gitignored for security, you need to create it manually.
+
+STEP 1: Create the .env file
+────────────────────────────────────────────────────────────────────────
+cd backend
+copy .env.example .env
+
+(On Linux/Mac: cp .env.example .env)
+
+
+STEP 2: Add Your Gemini API Key
+────────────────────────────────────────────────────────────────────────
+Open backend/.env in your editor and add:
+
+GOOGLE_API_KEY=AIzaSyC2f_Fljw-lJD91bot8yXQvUe2QwDlAb8E
+
+
+STEP 3: Verify Configuration
+────────────────────────────────────────────────────────────────────────
+Your .env should look like this:
+
+─── backend/.env ───────────────────────────────────────────────────────
+# Application
+APP_NAME="Agentic Knowledge Workspace"
+ENVIRONMENT=development
+DEBUG=true
+API_VERSION=v1
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+BACKEND_CORS_ORIGINS=["http://localhost:3000"]
+
+# Database
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/agentic_workspace
+DATABASE_ECHO=false
+
+# Security & Auth
+JWT_SECRET_KEY=dev-secret-key-change-this
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# AI Services - Using Gemini
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-1.5-flash
+GOOGLE_API_KEY=AIzaSyC2f_Fljw-lJD91bot8yXQvUe2QwDlAb8E
+
+# Optional: For embeddings (Phase 4)
+OPENAI_API_KEY=
+
+# LangSmith (optional)
+LANGSMITH_API_KEY=
+LANGSMITH_PROJECT=agentic-workspace
+LANGCHAIN_TRACING_V2=false
+
+# Storage
+STORAGE_PROVIDER=local
+LOCAL_STORAGE_PATH=./storage
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+────────────────────────────────────────────────────────────────────────
+
+
+STEP 4: Test Configuration
+────────────────────────────────────────────────────────────────────────
+python -c "from app.core.config import settings; print('✅ Provider:', settings.LLM_PROVIDER, '| Model:', settings.LLM_MODEL)"
+
+Expected output:
+✅ Provider: gemini | Model: gemini-1.5-flash
+
+
+WHAT'S CONFIGURED
+═══════════════════════════════════════════════════════════════════════
+✅ LLM Provider: Google Gemini
+✅ Model: gemini-1.5-flash (fast and cost-effective)
+✅ API Key: Set and ready to use
+✅ Cost: ~2-3x cheaper than OpenAI/Anthropic
+
+FEATURES READY
+═══════════════════════════════════════════════════════════════════════
+✅ Agent service with Gemini support
+✅ Email drafting (Phase 6)
+✅ Jira ticket creation (Phase 6)
+✅ Report generation (Phase 6)
+✅ RAG queries (Phase 5)
+✅ Chat interface (Phase 5)
+
+DOCUMENTATION
+═══════════════════════════════════════════════════════════════════════
+• Detailed setup: backend/GEMINI_SETUP.md
+• Provider comparison: backend/LLM_PROVIDERS.md
+• Database setup: backend/DATABASE_SETUP.md
+
+NEED HELP?
+═══════════════════════════════════════════════════════════════════════
+• Check if .env exists: ls backend/.env
+• View current config: cat backend/.env | grep LLM
+• Test API key: See GEMINI_SETUP.md
+
+═══════════════════════════════════════════════════════════════════════
+
