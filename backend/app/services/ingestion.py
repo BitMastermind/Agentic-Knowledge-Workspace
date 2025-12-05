@@ -5,7 +5,7 @@ from typing import BinaryIO, List, Dict
 import PyPDF2
 import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from sentence_transformers import SentenceTransformer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -19,22 +19,25 @@ logger = get_logger(__name__)
 class IngestionService:
     """Service for document ingestion, parsing, and chunking."""
 
+    # Embedding model configuration
+    EMBEDDING_MODEL = "all-mpnet-base-v2"  # Upgraded: 768 dims, better semantic understanding
+    EMBEDDING_DIMS = 768
+
     def __init__(self):
+        # Improved chunking: larger chunks with more overlap for better context
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=1500,  # Increased from 1000
+            chunk_overlap=300,  # Increased from 200
             length_function=len,
+            separators=["\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " ", ""],  # Paragraph-aware
         )
-        # Initialize Gemini embeddings (FREE!)
-        if settings.GOOGLE_API_KEY:
-            self.embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
-                google_api_key=settings.GOOGLE_API_KEY,
-            )
-            logger.info("gemini_embeddings_initialized", model="embedding-001")
-        else:
+        # Initialize Sentence Transformers (FREE, LOCAL, NO LIMITS!)
+        try:
+            self.embeddings = SentenceTransformer(self.EMBEDDING_MODEL)
+            logger.info("sentence_transformers_initialized", model=self.EMBEDDING_MODEL, dims=self.EMBEDDING_DIMS)
+        except Exception as e:
             self.embeddings = None
-            logger.error("google_api_key_not_set", message="Embeddings require GOOGLE_API_KEY")
+            logger.error("embedding_model_load_failed", error=str(e))
 
     async def parse_document(self, file: BinaryIO, file_type: str) -> str:
         """Parse document and extract text content."""
@@ -54,12 +57,29 @@ class IngestionService:
             raise
 
     def _parse_pdf(self, file: BinaryIO) -> str:
-        """Parse PDF file and extract text."""
-        pdf_reader = PyPDF2.PdfReader(file)
+        """Parse PDF file and extract text using pdfplumber (better extraction)."""
+        import pdfplumber
+        
         text = ""
-        for page_num, page in enumerate(pdf_reader.pages):
-            text += f"\\n--- Page {page_num + 1} ---\\n"
-            text += page.extract_text()
+        try:
+            with pdfplumber.open(file) as pdf:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += f"\n--- Page {page_num} ---\n"
+                        text += page_text + "\n"
+        except Exception as e:
+            logger.error("pdfplumber_extraction_failed", error=str(e))
+            # Fallback to PyPDF2
+            logger.info("trying_pypdf2_fallback")
+            file.seek(0)  # Reset file pointer
+            pdf_reader = PyPDF2.PdfReader(file)
+            for page_num, page in enumerate(pdf_reader.pages, 1):
+                page_text = page.extract_text()
+                if page_text:
+                    text += f"\n--- Page {page_num} ---\n"
+                    text += page_text + "\n"
+        
         return text
 
     def _parse_csv(self, file: BinaryIO) -> str:
@@ -92,22 +112,23 @@ class IngestionService:
         ]
 
     async def generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text using Gemini (FREE!)."""
+        """Generate embedding for text using Sentence Transformers (FREE, LOCAL!)."""
         if not self.embeddings:
-            raise ValueError("GOOGLE_API_KEY not configured for embeddings")
+            raise ValueError("Embedding model not loaded")
         
         try:
-            # Truncate text if too long (Gemini can handle up to ~10k tokens)
-            if len(text) > 40000:  # ~10k tokens
-                text = text[:40000]
+            # Truncate text if too long
+            if len(text) > 5000:  # Reasonable limit for local model
+                text = text[:5000]
             
-            # Generate embedding using Gemini
-            embedding = await self.embeddings.aembed_query(text)
+            # Generate embedding locally (no API call!)
+            # Note: This is synchronous but fast (~50ms)
+            embedding = self.embeddings.encode(text, convert_to_tensor=False)
             
-            # Gemini returns 768 dimensions
-            return embedding
+            # Convert to list and return (384 dimensions)
+            return embedding.tolist()
         except Exception as e:
-            logger.error("embedding_generation_failed", error=str(e), provider="gemini")
+            logger.error("embedding_generation_failed", error=str(e), provider="local")
             raise
 
     async def process_document(

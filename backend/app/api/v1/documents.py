@@ -174,16 +174,26 @@ async def upload_document(
 
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents(
+    skip: int = 0,
+    limit: int = 100,  # Default to 100 documents max per request
     current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all documents for the current tenant."""
+    """List all documents for the current tenant with pagination."""
     try:
-        # Query documents filtered by tenant_id
+        # Validate pagination parameters
+        if skip < 0:
+            skip = 0
+        if limit < 1 or limit > 500:  # Max 500 documents per request
+            limit = 100
+        
+        # Query documents filtered by tenant_id with pagination
         result = await db.execute(
             select(Document)
             .where(Document.tenant_id == current_user["tenant_id"])
             .order_by(Document.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         
         documents = []

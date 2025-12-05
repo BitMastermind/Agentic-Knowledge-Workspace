@@ -12,6 +12,7 @@ import type {
   EvaluationMetrics,
   EvaluationRun,
   ApiError,
+  ReportResponse,
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -261,8 +262,8 @@ class ApiClient {
     documentIds: number[],
     reportType?: string,
     format?: string
-  ): Promise<{ report_url: string; format: string }> {
-    return this.fetch("/agent/generate-report", {
+  ): Promise<ReportResponse> {
+    return this.fetch<ReportResponse>("/agent/generate-report", {
       method: "POST",
       body: JSON.stringify({
         document_ids: documentIds,
@@ -270,6 +271,25 @@ class ApiClient {
         format,
       }),
     });
+  }
+
+  async getReport(reportId: string): Promise<string> {
+    // Fetch report as text/html
+    const token = this.getAccessToken();
+    const response = await fetch(`${this.baseUrl}/agent/reports/${reportId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: "Failed to fetch report",
+      }));
+      throw new Error(error.detail);
+    }
+
+    return response.text();
   }
 
   // Evaluation endpoints

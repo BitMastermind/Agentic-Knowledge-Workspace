@@ -1,7 +1,7 @@
 """Document and chunk models for file storage and embeddings."""
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum, JSON, Index
 from pgvector.sqlalchemy import Vector
 import enum
 
@@ -32,8 +32,13 @@ class Document(Base):
     storage_key = Column(String, nullable=False, unique=True)  # S3 key or local path
     error_message = Column(Text, nullable=True)
     doc_metadata = Column(JSON, default={})  # Renamed from 'metadata' (SQLAlchemy reserved word)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)  # Added index for sorting
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Composite index for optimized tenant-specific queries with date sorting
+    __table_args__ = (
+        Index('idx_tenant_created', 'tenant_id', 'created_at'),
+    )
 
 
 class Chunk(Base):
@@ -44,7 +49,7 @@ class Chunk(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
-    embedding = Column(Vector(768))  # Gemini embedding-001 dimension (FREE!)
+    embedding = Column(Vector(768))  # Sentence Transformers all-mpnet-base-v2 (768 dims, FREE, LOCAL!)
     chunk_metadata = Column(JSON, default={})  # page, section, etc. (renamed from 'metadata')
     created_at = Column(DateTime, default=datetime.utcnow)
 

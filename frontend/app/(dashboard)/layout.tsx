@@ -18,12 +18,15 @@ export default function DashboardLayout({
     { name: "Evaluation", href: "/app/eval", icon: "📊" },
   ];
 
+  // Check if we're on the chat page
+  const isChatPage = pathname === '/app/chat';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Bar */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+    <div className="fixed inset-0 flex flex-col bg-gray-50">
+      {/* Top Bar - Fixed height */}
+      <nav className="bg-white border-b border-gray-200 flex-shrink-0 h-16">
+        <div className="px-4 sm:px-6 lg:px-8 h-full">
+          <div className="flex justify-between h-full items-center">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="text-xl font-bold text-gray-900">
@@ -44,9 +47,9 @@ export default function DashboardLayout({
         </div>
       </nav>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - Fixed width */}
+        <aside className="w-64 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto">
           <nav className="mt-5 px-2 space-y-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
@@ -69,7 +72,9 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8">{children}</main>
+        <main className={`flex-1 overflow-hidden ${isChatPage ? '' : 'p-8 overflow-y-auto'}`}>
+          {children}
+        </main>
       </div>
     </div>
   );

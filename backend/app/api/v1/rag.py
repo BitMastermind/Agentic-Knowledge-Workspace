@@ -7,20 +7,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema import HumanMessage, SystemMessage
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_tenant_access
 from app.services.retriever import RetrieverService
+from app.services.answer_engine import AnswerEngineService
 from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
 
-# Initialize retriever and LLM
+# Initialize services
 retriever_service = RetrieverService()
+answer_engine = AnswerEngineService()
 
 
 class QueryRequest(BaseModel):
@@ -53,82 +53,55 @@ async def query_documents(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Query documents using RAG (non-streaming).
+    Query documents using RAG with professional answer formatting.
     
     Flow:
-    1. Embed query with Gemini
-    2. Retrieve relevant chunks from pgvector
-    3. Build context from chunks
-    4. Generate answer with Gemini LLM
-    5. Return answer + source citations
+    1. Retrieve relevant chunks from pgvector (local embeddings)
+    2. Generate professional Google/Perplexity-style answer with inline citations
+    3. Return answer + source metadata
+    
+    The answer engine produces:
+    - Clean, concise paragraph-style responses
+    - Inline citations [1], [2], etc.
+    - No messy metadata or filenames in the answer
+    - Professional, neutral tone
     """
     try:
         start_time = time.time()
         
-        # 1. Retrieve relevant chunks
-        chunks = await retriever_service.retrieve(
-            db=db,
+        # Check if query is conversational (before retrieval to save resources)
+        is_conversational = answer_engine._is_conversational_query(request.query)
+        
+        # 1. Retrieve relevant chunks with advanced retrieval pipeline
+        # Uses hybrid search (vector + BM25), re-ranking, and query expansion
+        # Skip retrieval for conversational queries
+        chunks = []
+        if not is_conversational:
+            chunks = await retriever_service.retrieve(
+                db=db,
+                query=request.query,
+                tenant_id=current_user["tenant_id"],
+                document_ids=request.document_ids,
+                top_k=15,  # Increased for more comprehensive answers
+            )
+        
+        # 2. Generate professional answer using answer engine
+        answer = await answer_engine.generate_answer(
             query=request.query,
-            tenant_id=current_user["tenant_id"],
-            document_ids=request.document_ids,
-            top_k=10,
+            chunks=chunks,
         )
         
-        if not chunks:
-            return {
-                "answer": "I couldn't find any relevant information in your documents to answer this question. Please try uploading more documents or rephrasing your question.",
-                "sources": [],
-            }
-        
-        # 2. Build context from chunks
-        context_parts = []
-        for idx, chunk in enumerate(chunks, 1):
-            context_parts.append(f"[{idx}] {chunk['content']}\n(Source: {chunk['document_name']})")
-        
-        context = "\n\n".join(context_parts)
-        
-        # 3. Create prompt for Gemini
-        system_prompt = """You are a helpful AI assistant that answers questions based on provided documents.
-
-Instructions:
-- Answer the question using ONLY the information from the provided context
-- Cite sources using [1], [2], etc. to reference the context numbers
-- If the context doesn't contain enough information, say so clearly
-- Be concise but complete
-- Use a professional, helpful tone"""
-
-        user_prompt = f"""Context from documents:
-
-{context}
-
-Question: {request.query}
-
-Please answer the question based on the context above. Cite your sources using [1], [2], etc."""
-
-        # 4. Call Gemini LLM
-        llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.7,
-        )
-        
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt),
-        ]
-        
-        response = await llm.ainvoke(messages)
-        answer = response.content
-        
-        # 5. Format sources
+        # 3. Format sources for frontend display (not shown in answer)
+        # Only include sources if chunks are relevant
         sources = []
-        for chunk in chunks[:5]:  # Return top 5 sources
-            sources.append({
-                "id": chunk["id"],
-                "document_name": chunk["document_name"],
-                "snippet": chunk["content"][:200] + "..." if len(chunk["content"]) > 200 else chunk["content"],
-                "metadata": chunk["metadata"],
-            })
+        if chunks and answer_engine._chunks_are_relevant(chunks):
+            for chunk in chunks[:5]:  # Return top 5 sources
+                sources.append({
+                    "id": chunk["id"],
+                    "document_name": chunk["document_name"],
+                    "snippet": chunk["content"][:200] + "..." if len(chunk["content"]) > 200 else chunk["content"],
+                    "metadata": chunk["metadata"],
+                })
         
         latency_ms = (time.time() - start_time) * 1000
         
@@ -162,80 +135,48 @@ async def query_documents_stream(
     """
     Query documents using RAG with SSE streaming.
     
-    Streams tokens in real-time and sends sources at the end.
+    Streams professional-formatted answer tokens in real-time, then sends sources.
     """
     
     async def generate() -> AsyncIterator[str]:
-        """Generate streaming response with Gemini."""
+        """Generate streaming response with professional answer engine."""
         try:
-            # 1. Retrieve relevant chunks
-            chunks = await retriever_service.retrieve(
-                db=db,
+            # Check if query is conversational (before retrieval to save resources)
+            is_conversational = answer_engine._is_conversational_query(request.query)
+            
+            # 1. Retrieve relevant chunks with advanced retrieval pipeline
+            # Skip retrieval for conversational queries
+            chunks = []
+            if not is_conversational:
+                chunks = await retriever_service.retrieve(
+                    db=db,
+                    query=request.query,
+                    tenant_id=current_user["tenant_id"],
+                    document_ids=request.document_ids,
+                    top_k=15,  # Increased for more comprehensive answers
+                )
+            
+            # 2. Stream professional answer using answer engine
+            async for token in answer_engine.generate_answer_stream(
                 query=request.query,
-                tenant_id=current_user["tenant_id"],
-                document_ids=request.document_ids,
-                top_k=10,
-            )
+                chunks=chunks,
+            ):
+                token_data = {
+                    "type": "token",
+                    "content": token,
+                }
+                yield f"data: {json.dumps(token_data)}\n\n"
             
-            if not chunks:
-                # Send error message
-                yield f'data: {json.dumps({"type": "token", "content": "I couldn\'t find any relevant information in your documents."})}\n\n'
-                yield "data: [DONE]\n\n"
-                return
-            
-            # 2. Build context
-            context_parts = []
-            for idx, chunk in enumerate(chunks, 1):
-                context_parts.append(f"[{idx}] {chunk['content']}\n(Source: {chunk['document_name']})")
-            
-            context = "\n\n".join(context_parts)
-            
-            # 3. Create prompt
-            system_prompt = """You are a helpful AI assistant that answers questions based on provided documents.
-
-Instructions:
-- Answer using ONLY the information from the provided context
-- Cite sources using [1], [2], etc.
-- Be concise but complete
-- If insufficient information, say so clearly"""
-
-            user_prompt = f"""Context:
-
-{context}
-
-Question: {request.query}
-
-Answer:"""
-
-            # 4. Stream from Gemini
-            llm = ChatGoogleGenerativeAI(
-                model=settings.LLM_MODEL,
-                google_api_key=settings.GOOGLE_API_KEY,
-                temperature=0.7,
-                streaming=True,
-            )
-            
-            # Stream tokens
-            async for chunk_response in llm.astream([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt),
-            ]):
-                if hasattr(chunk_response, 'content') and chunk_response.content:
-                    token_data = {
-                        "type": "token",
-                        "content": chunk_response.content,
-                    }
-                    yield f"data: {json.dumps(token_data)}\n\n"
-            
-            # 5. Send sources at the end
+            # 3. Send sources at the end (only if chunks are relevant)
             sources = []
-            for chunk in chunks[:5]:
-                sources.append({
-                    "id": chunk["id"],
-                    "document_name": chunk["document_name"],
-                    "snippet": chunk["content"][:200] + "..." if len(chunk["content"]) > 200 else chunk["content"],
-                    "metadata": chunk["metadata"],
-                })
+            if chunks and answer_engine._chunks_are_relevant(chunks):
+                for chunk in chunks[:5]:
+                    sources.append({
+                        "id": chunk["id"],
+                        "document_name": chunk["document_name"],
+                        "snippet": chunk["content"][:200] + "..." if len(chunk["content"]) > 200 else chunk["content"],
+                        "metadata": chunk["metadata"],
+                    })
             
             sources_data = {
                 "type": "sources",
@@ -243,7 +184,7 @@ Answer:"""
             }
             yield f"data: {json.dumps(sources_data)}\n\n"
             
-            # 6. Send completion signal
+            # 4. Send completion signal
             yield "data: [DONE]\n\n"
             
             logger.info(

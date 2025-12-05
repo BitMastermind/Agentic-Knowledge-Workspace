@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiClient } from "@/lib/api-client";
 import type { Document } from "@/lib/types";
 
@@ -9,27 +9,46 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const documentsRef = useRef<Document[]>([]);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   useEffect(() => {
-    loadDocuments();
+    // Initial load with loading spinner
+    loadDocuments(true);
     
-    // Poll for document status updates every 5 seconds
+    // Smart polling: only poll when documents are processing
     const interval = setInterval(() => {
-      loadDocuments();
+      const hasProcessing = documentsRef.current.some(
+        (doc) => doc.status === "processing" || doc.status === "pending"
+      );
+      
+      // Only fetch if there are documents being processed
+      if (hasProcessing) {
+        loadDocuments(false); // Background poll without loading spinner
+      }
     }, 5000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Run once on mount, ref prevents stale closure
 
-  const loadDocuments = async () => {
+  const loadDocuments = async (showLoading: boolean = true) => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load or explicit refresh
+      if (showLoading) {
+        setLoading(true);
+      }
       const docs = await apiClient.listDocuments();
       setDocuments(docs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load documents");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -44,8 +63,8 @@ export default function DocumentsPage() {
       // Upload document
       const uploadedDoc = await apiClient.uploadDocument(file);
       
-      // Immediately refresh the list to show the new document
-      await loadDocuments();
+      // Immediately refresh the list to show the new document (with loading spinner)
+      await loadDocuments(true);
       
       // Reset file input
       e.target.value = "";
@@ -61,7 +80,7 @@ export default function DocumentsPage() {
 
     try {
       await apiClient.deleteDocument(docId);
-      await loadDocuments();
+      await loadDocuments(true); // Refresh with loading spinner
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete document");
     }

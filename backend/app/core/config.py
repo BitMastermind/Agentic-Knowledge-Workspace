@@ -53,10 +53,10 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"  # "openai", "anthropic", or "gemini"
     LLM_MODEL: str = "gemini-1.5-flash"  # or "gemini-1.5-pro"
     
-    # Embeddings Configuration (FREE with Gemini!)
-    EMBEDDING_PROVIDER: str = "gemini"  # "gemini" (free) or "openai" (paid)
-    EMBEDDING_MODEL: str = "models/embedding-001"  # Gemini: 768 dims, FREE
-    EMBEDDING_DIMENSION: int = 768  # Gemini: 768, OpenAI: 1536
+    # Embeddings Configuration (FREE, LOCAL - No API needed!)
+    EMBEDDING_PROVIDER: str = "local"  # local (free, no API) or "gemini" or "openai"
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"  # Sentence Transformers: 384 dims
+    EMBEDDING_DIMENSION: int = 384  # Local: 384, Gemini: 768, OpenAI: 1536
 
     # LangSmith
     LANGSMITH_API_KEY: str = ""

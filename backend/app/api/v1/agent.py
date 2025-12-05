@@ -1,13 +1,32 @@
 """Agent action endpoints (email, Jira, reports)."""
 
-from fastapi import APIRouter, Depends
+import json
+import uuid
+from datetime import datetime
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_tenant_access
+from app.core.config import settings
+from app.core.logging import get_logger
+from app.models.document import Document, Chunk
+from app.services.agent import AgentService
+from app.services.retriever import RetrieverService
+from app.services.storage import storage_service
+from app.integrations.jira_client import JiraClient
+from app.integrations.email_client import EmailClient
 
+logger = get_logger(__name__)
 router = APIRouter()
+
+# Initialize services
+agent_service = AgentService()
+retriever_service = RetrieverService()
 
 
 class EmailDraftRequest(BaseModel):
@@ -46,7 +65,7 @@ class ReportRequest(BaseModel):
 
     document_ids: list[int]
     report_type: str = "summary"
-    format: str = "pdf"
+    format: str = "html"  # html or pdf
 
 
 class ReportResponse(BaseModel):
@@ -54,59 +73,334 @@ class ReportResponse(BaseModel):
 
     report_url: str
     format: str
+    report_id: str
+    report_type: str
+    document_names: list[str]
+    document_count: int
 
 
 @router.post("/email-draft", response_model=EmailDraftResponse)
 async def generate_email_draft(
     request: EmailDraftRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate an email draft using AI."""
-    # TODO: Implement email draft generation
-    # 1. Use LangChain agent with EmailDraftTool
-    # 2. Generate subject and body based on context
-    # 3. Return draft for user to review
+    """
+    Generate an email draft using AI.
     
-    return {
-        "subject": "Placeholder Subject",
-        "body": "Placeholder email body.",
-    }
+    Uses the agent service to generate a professional email draft
+    based on the provided context.
+    """
+    try:
+        result = await agent_service.generate_email_draft(
+            context=request.context,
+            recipient=request.recipient,
+            tone=request.tone,
+        )
+        
+        logger.info(
+            "email_draft_generated",
+            tenant_id=current_user["tenant_id"],
+            user_id=current_user["sub"],
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error("email_draft_endpoint_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate email draft: {str(e)}",
+        )
 
 
 @router.post("/jira-ticket", response_model=JiraTicketResponse)
 async def create_jira_ticket(
     request: JiraTicketRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a Jira ticket."""
-    # TODO: Implement Jira ticket creation
-    # 1. Validate Jira credentials for tenant
-    # 2. Use Jira API client to create ticket
-    # 3. Return ticket key and URL
+    """
+    Create a Jira ticket.
     
-    return {
-        "ticket_key": "PLACEHOLDER-123",
-        "ticket_url": "https://example.atlassian.net/browse/PLACEHOLDER-123",
-    }
+    Requires Jira credentials to be configured in environment variables
+    or tenant settings.
+    """
+    try:
+        # Get Jira credentials from settings (or tenant-specific storage in future)
+        if not all([settings.JIRA_URL, settings.JIRA_EMAIL, settings.JIRA_API_TOKEN]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Jira credentials not configured. Please set JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN.",
+            )
+        
+        # Initialize Jira client
+        jira_client = JiraClient(
+            server_url=settings.JIRA_URL,
+            email=settings.JIRA_EMAIL,
+            api_token=settings.JIRA_API_TOKEN,
+        )
+        
+        # Create ticket
+        result = jira_client.create_ticket(
+            project_key=request.project_key,
+            summary=request.summary,
+            description=request.description,
+            issue_type=request.issue_type,
+        )
+        
+        logger.info(
+            "jira_ticket_created",
+            ticket_key=result["ticket_key"],
+            tenant_id=current_user["tenant_id"],
+            user_id=current_user["sub"],
+        )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("jira_ticket_creation_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create Jira ticket: {str(e)}",
+        )
 
 
 @router.post("/generate-report", response_model=ReportResponse)
 async def generate_report(
     request: ReportRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate a report from selected documents."""
-    # TODO: Implement report generation
-    # 1. Fetch document contents
-    # 2. Use LangChain agent to summarize/analyze
-    # 3. Generate PDF or HTML report
-    # 4. Upload to storage and return URL
+    """
+    Generate a report from selected documents.
     
-    return {
-        "report_url": "https://storage.example.com/reports/placeholder.pdf",
-        "format": request.format,
-    }
+    Fetches document contents, uses AI to analyze/summarize,
+    and generates an HTML or PDF report.
+    """
+    try:
+        tenant_id = current_user["tenant_id"]
+        
+        # 1. Validate documents belong to tenant
+        result = await db.execute(
+            select(Document)
+            .where(
+                Document.id.in_(request.document_ids),
+                Document.tenant_id == tenant_id,
+                Document.status == "completed",
+            )
+        )
+        documents = result.scalars().all()
+        
+        if len(documents) != len(request.document_ids):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="One or more documents not found or not accessible",
+            )
+        
+        # 2. Fetch chunks from documents
+        result = await db.execute(
+            select(Chunk)
+            .where(Chunk.document_id.in_(request.document_ids))
+            .order_by(Chunk.document_id, Chunk.id)
+        )
+        chunks = result.scalars().all()
+        
+        if not chunks:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No content found in selected documents",
+            )
+        
+        # 3. Build context from chunks
+        context_parts = []
+        for chunk in chunks:
+            context_parts.append(chunk.content)
+        full_context = "\n\n".join(context_parts)
+        
+        # 4. Generate report using LLM
+        report_prompt = f"""Generate a comprehensive {request.report_type} report based on the following document content:
+
+Documents: {', '.join([d.filename for d in documents])}
+
+Content:
+{full_context[:10000]}  # Limit context size
+
+Create a well-structured report with:
+- Executive summary
+- Key findings
+- Detailed analysis
+- Conclusions and recommendations
+
+Format the report in markdown with proper headings, sections, and formatting.
+"""
+        
+        from langchain.schema import HumanMessage, SystemMessage
+        
+        llm = agent_service._get_llm()
+        messages = [
+            SystemMessage(content="You are an expert report writer. Generate professional, well-structured reports."),
+            HumanMessage(content=report_prompt),
+        ]
+        
+        response = await llm.ainvoke(messages)
+        report_content = response.content
+        
+        # 5. Generate HTML report
+        if request.format == "html":
+            html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Document Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }}
+        h1 {{ color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }}
+        h2 {{ color: #555; margin-top: 30px; }}
+        h3 {{ color: #777; }}
+        p {{ margin: 15px 0; }}
+        ul, ol {{ margin: 15px 0; padding-left: 30px; }}
+        code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
+        pre {{ background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+        blockquote {{ border-left: 4px solid #ddd; padding-left: 20px; margin: 20px 0; color: #666; }}
+    </style>
+</head>
+<body>
+    <h1>Document Analysis Report</h1>
+    <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p><strong>Documents:</strong> {', '.join([d.filename for d in documents])}</p>
+    <hr>
+    {_markdown_to_html(report_content)}
+</body>
+</html>
+"""
+            
+            # Save HTML report
+            report_id = uuid.uuid4().hex[:8]
+            storage_key = f"tenant_{tenant_id}/reports/{report_id}_report.html"
+            
+            # Save to local storage
+            report_path = storage_service.local_path / storage_key
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(html_content, encoding="utf-8")
+            
+            # Return API endpoint URL for accessing the report
+            report_url = f"/api/{settings.API_VERSION}/agent/reports/{report_id}"
+            
+        else:  # PDF format (simplified - would use reportlab or weasyprint in production)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="PDF format not yet implemented. Please use 'html' format.",
+            )
+        
+        logger.info(
+            "report_generated",
+            report_type=request.report_type,
+            format=request.format,
+            document_count=len(documents),
+            tenant_id=tenant_id,
+        )
+        
+        return {
+            "report_url": report_url,
+            "format": request.format,
+            "report_id": report_id,
+            "report_type": request.report_type,
+            "document_names": [d.filename for d in documents],
+            "document_count": len(documents),
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("report_generation_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate report: {str(e)}",
+        )
+
+
+@router.get("/reports/{report_id}")
+async def get_report(
+    report_id: str,
+    current_user: dict = Depends(require_tenant_access),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Serve a generated report file.
+    
+    Validates that the report belongs to the user's tenant.
+    """
+    try:
+        tenant_id = current_user["tenant_id"]
+        
+        # Construct storage key
+        storage_key = f"tenant_{tenant_id}/reports/{report_id}_report.html"
+        report_path = storage_service.local_path / storage_key
+        
+        # Check if file exists
+        if not report_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Report not found",
+            )
+        
+        # Verify tenant access (report path contains tenant_id)
+        if f"tenant_{tenant_id}" not in str(report_path):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+        
+        # Return file
+        return FileResponse(
+            path=str(report_path),
+            media_type="text/html",
+            filename=f"report_{report_id}.html",
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("report_serve_failed", error=str(e), report_id=report_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to serve report: {str(e)}",
+        )
+
+
+def _markdown_to_html(markdown: str) -> str:
+    """Simple markdown to HTML converter (basic implementation)."""
+    import re
+    
+    html = markdown
+    
+    # Headers
+    html = re.sub(r'^### (.*)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
+    html = re.sub(r'^## (.*)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
+    html = re.sub(r'^# (.*)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
+    
+    # Bold
+    html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
+    
+    # Italic
+    html = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html)
+    
+    # Code blocks
+    html = re.sub(r'```([^`]+)```', r'<pre><code>\1</code></pre>', html, flags=re.DOTALL)
+    
+    # Inline code
+    html = re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
+    
+    # Lists
+    html = re.sub(r'^\* (.*)$', r'<li>\1</li>', html, flags=re.MULTILINE)
+    html = re.sub(r'(<li>.*</li>)', r'<ul>\1</ul>', html, flags=re.DOTALL)
+    
+    # Paragraphs
+    paragraphs = html.split('\n\n')
+    html = '\n'.join([f'<p>{p.strip()}</p>' if p.strip() and not p.strip().startswith('<') else p for p in paragraphs])
+    
+    return html
 

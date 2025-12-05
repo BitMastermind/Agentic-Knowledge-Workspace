@@ -67,3 +67,12 @@ export interface TokenResponse {
   token_type: string;
 }
 
+export interface ReportResponse {
+  report_url: string;
+  format: string;
+  report_id: string;
+  report_type: string;
+  document_names: string[];
+  document_count: number;
+}
+

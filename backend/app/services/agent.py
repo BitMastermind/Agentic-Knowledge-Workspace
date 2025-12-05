@@ -1,11 +1,12 @@
 """LangChain agent service with tools."""
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.tools import Tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.schema import HumanMessage, SystemMessage
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -31,115 +32,93 @@ class AgentService:
                 api_key=settings.OPENAI_API_KEY,
                 temperature=0.7,
             )
-        
-        self.tools = self._create_tools()
 
-    def _create_tools(self) -> List[Tool]:
-        """Create agent tools."""
-        
-        def email_draft_tool(context: str) -> str:
-            """Generate an email draft from context."""
-            # TODO: Implement email generation logic
-            return f"Email draft based on: {context[:100]}..."
-        
-        def jira_ticket_tool(summary: str, description: str) -> str:
-            """Create a Jira ticket."""
-            # TODO: Implement Jira API integration
-            return f"Created Jira ticket: {summary}"
-        
-        def report_generation_tool(document_ids: str) -> str:
-            """Generate a report from documents."""
-            # TODO: Implement report generation logic
-            return f"Generated report for documents: {document_ids}"
-        
-        return [
-            Tool(
-                name="EmailDraft",
-                func=email_draft_tool,
-                description="Generate an email draft from given context. Input should be the context or topic.",
-            ),
-            Tool(
-                name="CreateJiraTicket",
-                func=jira_ticket_tool,
-                description="Create a Jira ticket. Input should be 'summary|description' separated by pipe.",
-            ),
-            Tool(
-                name="GenerateReport",
-                func=report_generation_tool,
-                description="Generate a report from document IDs. Input should be comma-separated document IDs.",
-            ),
-        ]
+    def _get_llm(self):
+        """Get LLM instance."""
+        return self.llm
 
-    async def run_agent(self, query: str, context: str = "") -> Dict:
+    async def generate_email_draft(
+        self,
+        context: str,
+        recipient: Optional[str] = None,
+        tone: str = "professional",
+    ) -> Dict[str, str]:
         """
-        Run agent with tools to answer query or take actions.
+        Generate email draft using LLM.
+        
+        Args:
+            context: Context or topic for the email
+            recipient: Optional recipient email/name
+            tone: Email tone (professional, casual, formal, friendly)
+        
+        Returns:
+            Dict with subject and body
         """
         try:
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful AI assistant with access to tools for email drafting, Jira ticket creation, and report generation."),
-                ("user", "{input}"),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
-            ])
+            recipient_text = f"Recipient: {recipient}\n" if recipient else ""
             
-            agent = create_openai_functions_agent(self.llm, self.tools, prompt)
-            agent_executor = AgentExecutor(agent=agent, tools=self.tools, verbose=True)
-            
-            full_input = query
-            if context:
-                full_input = f"Context: {context}\\n\\nQuery: {query}"
-            
-            result = await agent_executor.ainvoke({"input": full_input})
-            
-            logger.info("agent_execution_completed", query=query[:100])
-            return {
-                "output": result["output"],
-                "intermediate_steps": result.get("intermediate_steps", []),
-            }
-            
-        except Exception as e:
-            logger.error("agent_execution_failed", error=str(e))
-            raise
+            prompt = f"""Generate a {tone} email based on the following context:
 
-    async def generate_email_draft(self, context: str, tone: str = "professional") -> Dict:
-        """Generate email draft using LLM."""
-        try:
-            prompt = f"""Generate a professional email based on the following context:
+{recipient_text}Context: {context}
 
-Context: {context}
+Requirements:
+1. Write a clear, concise subject line
+2. Write a well-structured email body
+3. Use a {tone} tone throughout
+4. Make it actionable and professional
 
-Tone: {tone}
+Format your response as JSON with exactly these keys:
+- "subject": the email subject line
+- "body": the email body (can be plain text or markdown)
 
-Provide:
-1. Subject line
-2. Email body
-
-Format your response as JSON with keys "subject" and "body".
+Example format:
+{{
+  "subject": "Meeting Follow-up: Project Discussion",
+  "body": "Dear [Name],\\n\\nThank you for taking the time to meet..."
+}}
 """
-            messages = [{"role": "user", "content": prompt}]
-            response = await self.llm.ainvoke(messages)
             
-            # Try to parse JSON response
+            messages = [
+                SystemMessage(content="You are an expert email writer. Always respond with valid JSON only."),
+                HumanMessage(content=prompt),
+            ]
+            
+            response = await self._get_llm().ainvoke(messages)
+            
+            # Parse JSON response
             import json
+            import re
+            
+            content = response.content
+            
+            # Try to extract JSON if wrapped in markdown code blocks
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(1)
+            else:
+                # Try to find JSON object directly
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    content = json_match.group(0)
+            
             try:
-                content = response.content
-                # Try to extract JSON if wrapped in markdown
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
-                
                 parsed = json.loads(content)
                 return {
                     "subject": parsed.get("subject", "Email Subject"),
-                    "body": parsed.get("body", response.content),
+                    "body": parsed.get("body", content),
                 }
-            except:
-                # Fallback if JSON parsing fails
+            except json.JSONDecodeError:
+                # Fallback: try to extract subject and body from text
+                lines = content.split("\n")
+                subject = lines[0].replace("Subject:", "").strip() if lines else "Email Subject"
+                body = "\n".join(lines[1:]).strip() if len(lines) > 1 else content
+                
                 return {
-                    "subject": "Generated Email",
-                    "body": response.content,
+                    "subject": subject[:100],  # Limit subject length
+                    "body": body,
                 }
+                
         except Exception as e:
             logger.error("email_draft_failed", error=str(e))
-            raise
+            raise ValueError(f"Failed to generate email draft: {str(e)}")
 
