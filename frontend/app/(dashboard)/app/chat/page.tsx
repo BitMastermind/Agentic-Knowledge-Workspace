@@ -747,6 +747,8 @@ function ReportViewerModal({
   );
 }
 
+const CHAT_STORAGE_KEY = "agentic_workspace_chat_messages";
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -758,6 +760,44 @@ export default function ChatPage() {
   const [showReportViewer, setShowReportViewer] = useState(false);
   const [currentReportId, setCurrentReportId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
+
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
+    try {
+      const savedMessages = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        // Convert timestamp strings back to Date objects
+        const restoredMessages: ChatMessage[] = parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(restoredMessages);
+      }
+    } catch (err) {
+      console.error("Failed to load chat messages from localStorage:", err);
+    }
+  }, []);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (!isInitialized.current) return; // Don't save on initial load
+
+    try {
+      // Convert Date objects to strings for storage
+      const messagesToSave = messages.map((msg) => ({
+        ...msg,
+        timestamp: msg.timestamp.toISOString(),
+      }));
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
+    } catch (err) {
+      console.error("Failed to save chat messages to localStorage:", err);
+    }
+  }, [messages]);
 
   // Expose function to open report modal (for markdown link interception)
   useEffect(() => {
@@ -777,6 +817,13 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleClearChat = () => {
+    if (confirm("Are you sure you want to clear all chat messages? This cannot be undone.")) {
+      setMessages([]);
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -851,10 +898,23 @@ export default function ChatPage() {
       {/* Header - Compact */}
       <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0 bg-white">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-900">RAG Chat</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Ask questions about your documents
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">RAG Chat</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Ask questions about your documents
+              </p>
+            </div>
+            {messages.length > 0 && (
+              <button
+                onClick={handleClearChat}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                title="Clear chat history"
+              >
+                Clear Chat
+              </button>
+            )}
+          </div>
           {error && (
             <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
               {error}
