@@ -213,11 +213,13 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         user_tenant, tenant = user_tenant_data
         
         # 4. Generate tokens with tenant context
+        # Handle role being Enum or string
+        role_value = user_tenant.role.value if hasattr(user_tenant.role, 'value') else str(user_tenant.role)
         token_data = {
             "sub": str(user.id),
             "email": user.email,
             "tenant_id": tenant.id,
-            "role": user_tenant.role.value,
+            "role": role_value,
         }
         
         access_token = create_access_token(token_data)

@@ -58,4 +58,4 @@ This is a multi-tenant SaaS application for document management and RAG-powered 
 - Use pytest for backend, Jest/React Testing Library for frontend
 
 #Documentation
-Do not create any documentation, changelog, summary, or plan files (*.md) unless I explicitly ask.
+Do not create any documentation, summary, or plan files (*.md) unless I explicitly ask.

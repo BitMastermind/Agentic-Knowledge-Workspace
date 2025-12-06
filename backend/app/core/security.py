@@ -60,8 +60,14 @@ def decode_token(token: str) -> dict:
         )
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False))) -> dict:
     """Dependency to get current authenticated user from token."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     payload = decode_token(token)
     

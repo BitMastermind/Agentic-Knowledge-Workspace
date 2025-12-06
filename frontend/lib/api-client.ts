@@ -241,6 +241,27 @@ class ApiClient {
     });
   }
 
+  async sendEmail(
+    toEmails: string[],
+    subject: string,
+    body: string,
+    bodyHtml?: string,
+    ccEmails?: string[],
+    bccEmails?: string[]
+  ): Promise<{ status: string; message: string }> {
+    return this.fetch("/agent/send-email", {
+      method: "POST",
+      body: JSON.stringify({
+        to_emails: toEmails,
+        subject,
+        body,
+        body_html: bodyHtml,
+        cc_emails: ccEmails,
+        bcc_emails: bccEmails,
+      }),
+    });
+  }
+
   async createJiraTicket(
     projectKey: string,
     summary: string,

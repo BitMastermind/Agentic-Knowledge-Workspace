@@ -18,6 +18,7 @@ from app.models.document import Document, Chunk
 from app.services.agent import AgentService
 from app.services.retriever import RetrieverService
 from app.services.storage import storage_service
+from app.services.credentials import credentials_service
 from app.integrations.jira_client import JiraClient
 from app.integrations.email_client import EmailClient
 
@@ -42,6 +43,24 @@ class EmailDraftResponse(BaseModel):
 
     subject: str
     body: str
+
+
+class SendEmailRequest(BaseModel):
+    """Email sending request."""
+
+    to_emails: list[str]
+    subject: str
+    body: str
+    body_html: str | None = None
+    cc_emails: list[str] | None = None
+    bcc_emails: list[str] | None = None
+
+
+class SendEmailResponse(BaseModel):
+    """Email sending response."""
+
+    status: str
+    message: str
 
 
 class JiraTicketRequest(BaseModel):
@@ -101,7 +120,7 @@ async def generate_email_draft(
         logger.info(
             "email_draft_generated",
             tenant_id=current_user["tenant_id"],
-            user_id=current_user["sub"],
+            user_id=current_user["user_id"],
         )
         
         return result
@@ -114,6 +133,172 @@ async def generate_email_draft(
         )
 
 
+@router.post("/send-email", response_model=SendEmailResponse)
+async def send_email(
+    request: SendEmailRequest,
+    current_user: dict = Depends(require_tenant_access),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Send an email using SMTP.
+    
+    Uses tenant-specific credentials if available, otherwise falls back to global settings.
+    """
+    try:
+        tenant_id = current_user["tenant_id"]
+        
+        # Try to get tenant-specific credentials first
+        tenant_creds = await credentials_service.get_credentials(
+            db=db,
+            tenant_id=tenant_id,
+            integration_type="email",
+        )
+        
+        if tenant_creds:
+            # Use tenant-specific credentials
+            smtp_host = tenant_creds.get("smtp_host")
+            smtp_port = tenant_creds.get("smtp_port", 587)
+            smtp_user = tenant_creds.get("smtp_user")
+            smtp_password = tenant_creds.get("smtp_password")
+            use_tls = tenant_creds.get("use_tls", True)
+        else:
+            # Fall back to global settings
+            smtp_host = settings.SMTP_HOST
+            smtp_port = settings.SMTP_PORT
+            smtp_user = settings.SMTP_USER
+            smtp_password = settings.SMTP_PASSWORD
+            use_tls = True
+        
+        # Check if credentials are available
+        if not all([smtp_host, smtp_user, smtp_password]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SMTP credentials not configured. Please configure email credentials in tenant settings or set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in environment variables.",
+            )
+        
+        # Initialize email client
+        email_client = EmailClient(
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            use_tls=use_tls,
+        )
+        
+        # Send email
+        result = email_client.send_email(
+            to_emails=request.to_emails,
+            subject=request.subject,
+            body=request.body,
+            body_html=request.body_html,
+            cc_emails=request.cc_emails,
+            bcc_emails=request.bcc_emails,
+        )
+        
+        logger.info(
+            "email_sent",
+            to=request.to_emails,
+            subject=request.subject[:50],
+            tenant_id=current_user["tenant_id"],
+            user_id=current_user["user_id"],
+        )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("email_send_failed", error=str(e), to=request.to_emails)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}",
+        )
+
+
+@router.get("/jira-test")
+async def test_jira_connection(
+    current_user: dict = Depends(require_tenant_access),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Test Jira connection and credentials.
+    
+    Uses tenant-specific credentials if available, otherwise falls back to global settings.
+    Returns connection status and user information if successful.
+    """
+    try:
+        tenant_id = current_user["tenant_id"]
+        
+        # Try to get tenant-specific credentials first
+        tenant_creds = await credentials_service.get_credentials(
+            db=db,
+            tenant_id=tenant_id,
+            integration_type="jira",
+        )
+        
+        if tenant_creds:
+            # Use tenant-specific credentials
+            jira_url = tenant_creds.get("jira_url")
+            jira_email = tenant_creds.get("jira_email")
+            jira_api_token = tenant_creds.get("jira_api_token")
+        else:
+            # Fall back to global settings
+            jira_url = settings.JIRA_URL
+            jira_email = settings.JIRA_EMAIL
+            jira_api_token = settings.JIRA_API_TOKEN
+        
+        # Check if credentials are configured
+        if not all([jira_url, jira_email, jira_api_token]):
+            return {
+                "status": "not_configured",
+                "message": "Jira credentials not configured. Please configure Jira credentials in tenant settings or set JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN in environment variables.",
+            }
+        
+        # Initialize Jira client
+        jira_client = JiraClient(
+            server_url=jira_url,
+            email=jira_email,
+            api_token=jira_api_token,
+        )
+        
+        # Test connection
+        is_connected = jira_client.test_connection()
+        
+        if is_connected:
+            # Get current user info
+            client = jira_client._get_client()
+            current_user_info = client.current_user()
+            
+            logger.info(
+                "jira_connection_test_success",
+                tenant_id=current_user["tenant_id"],
+                user_id=current_user["user_id"],
+            )
+            
+            return {
+                "status": "connected",
+                "message": "Successfully connected to Jira",
+                "user": {
+                    "account_id": current_user_info.accountId,
+                    "display_name": current_user_info.displayName,
+                    "email": getattr(current_user_info, "emailAddress", None),
+                },
+                "server_url": settings.JIRA_URL,
+            }
+        else:
+            return {
+                "status": "failed",
+                "message": "Failed to connect to Jira. Please check your credentials.",
+            }
+            
+    except Exception as e:
+        logger.error("jira_connection_test_failed", error=str(e))
+        return {
+            "status": "error",
+            "message": f"Connection test failed: {str(e)}",
+        }
+
+
 @router.post("/jira-ticket", response_model=JiraTicketResponse)
 async def create_jira_ticket(
     request: JiraTicketRequest,
@@ -123,22 +308,41 @@ async def create_jira_ticket(
     """
     Create a Jira ticket.
     
-    Requires Jira credentials to be configured in environment variables
-    or tenant settings.
+    Uses tenant-specific credentials if available, otherwise falls back to global settings.
     """
     try:
-        # Get Jira credentials from settings (or tenant-specific storage in future)
-        if not all([settings.JIRA_URL, settings.JIRA_EMAIL, settings.JIRA_API_TOKEN]):
+        tenant_id = current_user["tenant_id"]
+        
+        # Try to get tenant-specific credentials first
+        tenant_creds = await credentials_service.get_credentials(
+            db=db,
+            tenant_id=tenant_id,
+            integration_type="jira",
+        )
+        
+        if tenant_creds:
+            # Use tenant-specific credentials
+            jira_url = tenant_creds.get("jira_url")
+            jira_email = tenant_creds.get("jira_email")
+            jira_api_token = tenant_creds.get("jira_api_token")
+        else:
+            # Fall back to global settings
+            jira_url = settings.JIRA_URL
+            jira_email = settings.JIRA_EMAIL
+            jira_api_token = settings.JIRA_API_TOKEN
+        
+        # Check if credentials are configured
+        if not all([jira_url, jira_email, jira_api_token]):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Jira credentials not configured. Please set JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN.",
+                detail="Jira credentials not configured. Please configure Jira credentials in tenant settings or set JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN in environment variables.",
             )
         
         # Initialize Jira client
         jira_client = JiraClient(
-            server_url=settings.JIRA_URL,
-            email=settings.JIRA_EMAIL,
-            api_token=settings.JIRA_API_TOKEN,
+            server_url=jira_url,
+            email=jira_email,
+            api_token=jira_api_token,
         )
         
         # Create ticket
@@ -153,7 +357,7 @@ async def create_jira_ticket(
             "jira_ticket_created",
             ticket_key=result["ticket_key"],
             tenant_id=current_user["tenant_id"],
-            user_id=current_user["sub"],
+            user_id=current_user["user_id"],
         )
         
         return result

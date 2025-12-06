@@ -1,6 +1,6 @@
 """LangChain agent service with tools."""
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable, Awaitable
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -10,6 +10,11 @@ from langchain.schema import HumanMessage, SystemMessage
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.services.agent_tools import (
+    create_email_draft_tool,
+    create_jira_ticket_tool,
+    create_report_tool,
+)
 
 logger = get_logger(__name__)
 
@@ -17,7 +22,18 @@ logger = get_logger(__name__)
 class AgentService:
     """Service for AI agent with tools (email, Jira, reports)."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        jira_client_factory: Optional[Callable[[], Awaitable]] = None,
+        report_generator: Optional[Callable] = None,
+    ):
+        """
+        Initialize agent service.
+        
+        Args:
+            jira_client_factory: Async function that returns a JiraClient instance
+            report_generator: Function to generate reports from documents
+        """
         # Initialize LLM based on provider
         if settings.LLM_PROVIDER == "gemini":
             self.llm = ChatGoogleGenerativeAI(
@@ -32,10 +48,98 @@ class AgentService:
                 api_key=settings.OPENAI_API_KEY,
                 temperature=0.7,
             )
+        
+        self.jira_client_factory = jira_client_factory
+        self.report_generator = report_generator
+        self._agent_executor: Optional[AgentExecutor] = None
 
     def _get_llm(self):
         """Get LLM instance."""
         return self.llm
+    
+    def _get_tools(self) -> List[Tool]:
+        """Get list of LangChain tools for the agent."""
+        tools = []
+        
+        # Email draft tool
+        tools.append(create_email_draft_tool(self))
+        
+        # Jira ticket tool (if factory provided)
+        if self.jira_client_factory:
+            tools.append(create_jira_ticket_tool(self.jira_client_factory))
+        
+        # Report generation tool (if generator provided)
+        if self.report_generator:
+            tools.append(create_report_tool(self.report_generator))
+        
+        return tools
+    
+    def _get_agent_executor(self) -> AgentExecutor:
+        """Get or create LangChain agent executor with tools."""
+        if self._agent_executor is None:
+            tools = self._get_tools()
+            
+            # Create agent prompt
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are a helpful AI assistant with access to tools for:
+- Generating email drafts
+- Creating Jira tickets
+- Generating reports from documents
+
+Use the tools when appropriate to help the user accomplish their tasks. Always explain what you're doing before using a tool."""),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+            
+            # Create agent (use OpenAI functions agent for function calling)
+            # Note: Gemini doesn't support function calling in the same way, so we'll use a simpler approach
+            if settings.LLM_PROVIDER == "openai" and len(tools) > 0:
+                try:
+                    agent = create_openai_functions_agent(self.llm, tools, prompt)
+                    # Create executor
+                    self._agent_executor = AgentExecutor(
+                        agent=agent,
+                        tools=tools,
+                        verbose=True,
+                        handle_parsing_errors=True,
+                    )
+                except Exception as e:
+                    logger.warning("failed_to_create_openai_agent", error=str(e))
+                    # Fall back to simple agent
+                    self._agent_executor = None
+            else:
+                # For Gemini or when tools are not available, agent executor is not created
+                # The direct methods (generate_email_draft, etc.) will still work
+                self._agent_executor = None
+                logger.info("agent_executor_not_created", reason="Gemini or no tools available")
+        
+        return self._agent_executor
+    
+    async def run_agent(self, input_text: str, chat_history: Optional[List] = None) -> str:
+        """
+        Run the agent with tools on user input.
+        
+        Args:
+            input_text: User's input/question
+            chat_history: Optional chat history
+            
+        Returns:
+            Agent's response
+        """
+        try:
+            executor = self._get_agent_executor()
+            if executor is None:
+                return "Agent executor is not available. Please use direct endpoints for actions."
+            
+            result = await executor.ainvoke({
+                "input": input_text,
+                "chat_history": chat_history or [],
+            })
+            return result.get("output", "I couldn't process that request.")
+        except Exception as e:
+            logger.error("agent_execution_failed", error=str(e))
+            return f"I encountered an error: {str(e)}"
 
     async def generate_email_draft(
         self,

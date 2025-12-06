@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { apiClient } from "@/lib/api-client";
 import type { ChatMessage, Source, Document, ReportResponse } from "@/lib/types";
 import ReactMarkdown from "react-markdown";
@@ -62,7 +62,18 @@ function AnswerWithCitations({
         rehypePlugins={[rehypeKatex]}
         components={{
         // Clean, readable styling
-        p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+        p: ({ children, ...props }: any) => {
+          // Check if this paragraph only contains a pre element (block code)
+          // If so, don't wrap in p tag to avoid invalid HTML nesting
+          const childrenArray = React.Children.toArray(children);
+          if (childrenArray.length === 1) {
+            const child = childrenArray[0] as any;
+            if (child && typeof child === 'object' && child.type === 'pre') {
+              return <>{children}</>;
+            }
+          }
+          return <p className="mb-4 last:mb-0" {...props}>{children}</p>;
+        },
         ul: ({ children }) => <ul className="list-disc ml-6 mb-4 space-y-1">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal ml-6 mb-4 space-y-1">{children}</ol>,
         li: ({ children }) => <li className="leading-7">{children}</li>,
@@ -74,14 +85,19 @@ function AnswerWithCitations({
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto my-4 max-w-full">
-              <code className="text-[13px] font-mono block" {...props}>
-                {children}
-              </code>
+            <code className="text-[13px] font-mono block" {...props}>
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children, ...props }: any) => {
+          // Pre component wraps block code - ensure it's not nested in p
+          return (
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto my-4 max-w-full" {...props}>
+              {children}
             </pre>
           );
         },
-        pre: ({ children }) => <>{children}</>,
         h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6 first:mt-0">{children}</h1>,
         h2: ({ children }) => <h2 className="text-xl font-bold mb-3 mt-5 first:mt-0">{children}</h2>,
         h3: ({ children }) => <h3 className="text-lg font-semibold mb-3 mt-4 first:mt-0">{children}</h3>,
@@ -184,6 +200,9 @@ function EmailDraftModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ subject: string; body: string } | null>(null);
+  const [toEmail, setToEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
   const handleGenerate = async () => {
     if (!context.trim()) {
@@ -210,12 +229,52 @@ function EmailDraftModal({
     }
   };
 
+  const handleSend = async () => {
+    if (!result) return;
+    
+    if (!toEmail.trim()) {
+      setError("Please enter a recipient email address");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emails = toEmail.split(",").map(e => e.trim());
+    const invalidEmails = emails.filter(e => !emailRegex.test(e));
+    
+    if (invalidEmails.length > 0) {
+      setError(`Invalid email address(es): ${invalidEmails.join(", ")}`);
+      return;
+    }
+
+    try {
+      setSending(true);
+      setError("");
+      await apiClient.sendEmail(
+        emails,
+        result.subject,
+        result.body
+      );
+      setSendSuccess(true);
+      setTimeout(() => {
+        handleClose();
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send email");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleClose = () => {
     setContext("");
     setRecipient("");
     setTone("professional");
     setError("");
     setResult(null);
+    setToEmail("");
+    setSending(false);
+    setSendSuccess(false);
     onClose();
   };
 
@@ -226,7 +285,7 @@ function EmailDraftModal({
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Generate Email Draft</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Generate Email Draft</h2>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -246,7 +305,7 @@ function EmailDraftModal({
                     value={context}
                     onChange={(e) => setContext(e.target.value)}
                     placeholder="Describe what the email should be about..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
                     rows={4}
                   />
                 </div>
@@ -260,7 +319,7 @@ function EmailDraftModal({
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="Recipient name or email"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
 
@@ -271,7 +330,7 @@ function EmailDraftModal({
                   <select
                     value={tone}
                     onChange={(e) => setTone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
                     <option value="professional">Professional</option>
                     <option value="casual">Casual</option>
@@ -290,7 +349,7 @@ function EmailDraftModal({
               <div className="mt-6 flex gap-3 justify-end">
                 <button
                   onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
                 >
                   Cancel
                 </button>
@@ -308,13 +367,31 @@ function EmailDraftModal({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    To (Email Address) *
+                  </label>
+                  <input
+                    type="text"
+                    value={toEmail}
+                    onChange={(e) => setToEmail(e.target.value)}
+                    placeholder="recipient@example.com (comma-separated for multiple)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
+                    disabled={sending || sendSuccess}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Enter recipient email address(es), separated by commas for multiple recipients
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Subject
                   </label>
                   <input
                     type="text"
                     value={result.subject}
                     onChange={(e) => setResult({ ...result, subject: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    disabled={sending || sendSuccess}
                   />
                 </div>
 
@@ -325,24 +402,46 @@ function EmailDraftModal({
                   <textarea
                     value={result.body}
                     onChange={(e) => setResult({ ...result, body: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     rows={10}
+                    disabled={sending || sendSuccess}
                   />
                 </div>
               </div>
 
+              {sendSuccess && (
+                <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded text-sm">
+                  Email sent successfully!
+                </div>
+              )}
+
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded text-sm">
+                  {error}
+                </div>
+              )}
+
               <div className="mt-6 flex gap-3 justify-end">
                 <button
                   onClick={() => setResult(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                  disabled={sending || sendSuccess}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleUse}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                  disabled={sending || sendSuccess}
                 >
                   Use This Draft
+                </button>
+                <button
+                  onClick={handleSend}
+                  disabled={sending || sendSuccess || !toEmail.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {sending ? "Sending..." : "Send Email"}
                 </button>
               </div>
             </>
@@ -407,7 +506,7 @@ function JiraTicketModal({
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Create Jira Ticket</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Create Jira Ticket</h2>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -426,7 +525,7 @@ function JiraTicketModal({
                 value={projectKey}
                 onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
                 placeholder="e.g., PROJ"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
               />
             </div>
 
@@ -439,7 +538,7 @@ function JiraTicketModal({
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="Brief summary of the ticket"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
               />
             </div>
 
@@ -451,7 +550,7 @@ function JiraTicketModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Detailed description of the issue"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-500"
                 rows={6}
               />
             </div>
@@ -463,7 +562,7 @@ function JiraTicketModal({
               <select
                 value={issueType}
                 onChange={(e) => setIssueType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="Task">Task</option>
                 <option value="Bug">Bug</option>
@@ -574,7 +673,7 @@ function ReportModal({
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Generate Report</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Generate Report</h2>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -604,7 +703,7 @@ function ReportModal({
                           onChange={() => toggleDocument(doc.id)}
                           className="mr-3"
                         />
-                        <span className="text-sm">{doc.filename}</span>
+                        <span className="text-sm text-gray-900">{doc.filename}</span>
                       </label>
                     ))}
                   </div>
@@ -619,7 +718,7 @@ function ReportModal({
               <select
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="summary">Summary</option>
                 <option value="analysis">Analysis</option>
@@ -634,7 +733,7 @@ function ReportModal({
               <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               >
                 <option value="html">HTML</option>
                 <option value="pdf" disabled>PDF (Coming Soon)</option>
@@ -716,7 +815,7 @@ function ReportViewerModal({
       <div className="bg-white rounded-2xl shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Report Viewer</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Report Viewer</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -1010,7 +1109,7 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask a question about your documents..."
                 disabled={loading}
-                className="flex-1 px-5 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 transition text-[15px]"
+                className="flex-1 px-5 py-3.5 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 transition text-[15px] text-gray-900 placeholder:text-gray-500"
               />
               <button
                 type="submit"
