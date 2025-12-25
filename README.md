@@ -376,14 +376,4 @@ npm run test:coverage
 3. **API Changes**: Update Pydantic schemas → Update API docs → Test endpoints
 4. **Code Quality**: Type hints required, linting with ESLint/Black
 
-## 📝 License
-
-[Add your license here]
-
-## 🤝 Contributing
-
-[Add contribution guidelines if applicable]
-
----
-
 **Built with ❤️ using FastAPI, Next.js, and LangChain**
