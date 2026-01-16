@@ -97,10 +97,10 @@ class ApiClient {
     });
   }
 
-  async refreshToken(refreshToken: string): Promise<TokenResponse> {
+  async refreshToken(refreshToken: string, tenantId?: number): Promise<TokenResponse> {
     return this.fetch<TokenResponse>("/auth/refresh", {
       method: "POST",
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({ refresh_token: refreshToken, tenant_id: tenantId }),
     });
   }
 
@@ -330,6 +330,40 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ run_id: runId, feedback }),
     });
+  }
+
+  // Credentials endpoints
+  async listCredentials(): Promise<any[]> {
+    return this.fetch("/credentials");
+  }
+
+  async saveCredentials(
+    integrationType: string,
+    credentials: Record<string, any>,
+    metadata?: Record<string, any>
+  ): Promise<any> {
+    return this.fetch("/credentials", {
+      method: "POST",
+      body: JSON.stringify({
+        integration_type: integrationType,
+        credentials,
+        metadata,
+      }),
+    });
+  }
+
+  async deleteCredentials(integrationType: string): Promise<void> {
+    await this.fetch(`/credentials/${integrationType}`, {
+      method: "DELETE",
+    });
+  }
+
+  async testJiraConnection(): Promise<{
+    status: string;
+    message: string;
+    user?: any;
+  }> {
+    return this.fetch("/agent/jira-test");
   }
 }
 

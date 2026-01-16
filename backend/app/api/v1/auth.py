@@ -43,6 +43,7 @@ class RefreshRequest(BaseModel):
     """Token refresh request."""
 
     refresh_token: str
+    tenant_id: int | None = None
 
 
 class TokenResponse(BaseModel):
@@ -282,19 +283,30 @@ async def refresh_token_endpoint(request: RefreshRequest, db: AsyncSession = Dep
                 detail="User not found or inactive",
             )
         
-        # Get default tenant
-        result = await db.execute(
-            select(UserTenant, Tenant)
-            .join(Tenant, UserTenant.tenant_id == Tenant.id)
-            .where(UserTenant.user_id == user.id)
-            .order_by(UserTenant.created_at.desc())
-        )
-        user_tenant_data = result.first()
+        # Determine tenant context:
+        # - If tenant_id is provided, validate membership and use it
+        # - Otherwise, use the most recently associated tenant as default
+        if request.tenant_id is not None:
+            result = await db.execute(
+                select(UserTenant, Tenant)
+                .join(Tenant, UserTenant.tenant_id == Tenant.id)
+                .where(UserTenant.user_id == user.id)
+                .where(UserTenant.tenant_id == request.tenant_id)
+            )
+            user_tenant_data = result.first()
+        else:
+            result = await db.execute(
+                select(UserTenant, Tenant)
+                .join(Tenant, UserTenant.tenant_id == Tenant.id)
+                .where(UserTenant.user_id == user.id)
+                .order_by(UserTenant.created_at.desc())
+            )
+            user_tenant_data = result.first()
         
         if not user_tenant_data:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="No tenant associated with user",
+                status_code=status.HTTP_403_FORBIDDEN if request.tenant_id is not None else status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User does not have access to requested tenant" if request.tenant_id is not None else "No tenant associated with user",
             )
         
         user_tenant, tenant = user_tenant_data

@@ -13,7 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => void;
-  switchTenant: (tenant: Tenant) => void;
+  switchTenant: (tenant: Tenant) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -152,9 +152,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  const switchTenant = (tenant: Tenant) => {
+  const switchTenant = async (tenant: Tenant) => {
     setCurrentTenant(tenant);
-    // TODO: Update token with new tenant context
+
+    const refreshToken =
+      typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
+
+    if (!refreshToken) {
+      // No refresh token means we can't safely switch tenant context.
+      logout();
+      return;
+    }
+
+    try {
+      const response = await apiClient.refreshToken(refreshToken, tenant.id);
+      apiClient.setAccessToken(response.access_token);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("refresh_token", response.refresh_token);
+        localStorage.setItem("current_tenant_id", String(tenant.id));
+      }
+
+      // Re-fetch user + tenant context based on the new token
+      const meResponse = await fetch("http://localhost:8000/api/v1/auth/me", {
+        headers: {
+          Authorization: `Bearer ${response.access_token}`,
+        },
+      });
+
+      if (!meResponse.ok) {
+        throw new Error("Failed to refresh tenant context");
+      }
+
+      const userData = await meResponse.json();
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        full_name: userData.full_name,
+      });
+      setCurrentTenant({
+        id: userData.tenant_id,
+        name: userData.tenant_name,
+        slug: "",
+        role: userData.role,
+      });
+    } catch (error) {
+      console.error("Failed to switch tenant:", error);
+      logout();
+    }
   };
 
   return (

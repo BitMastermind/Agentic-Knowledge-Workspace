@@ -73,3 +73,11 @@ htmlcov/
 # Alembic
 alembic/versions/*.pyc
 
+# Interview Questions (keep local, exclude from git)
+*INTERVIEW*.md
+*interview*.md
+INTERVIEW_QUESTIONS.md
+TOP_INTERVIEW_QUESTIONS.md
+
+# Cursor IDE files
+.cursorrules
