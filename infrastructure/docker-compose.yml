@@ -43,6 +43,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/agentic_workspace
       - REDIS_URL=redis://redis:6379/0
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyA9Bv6TNW3tD8M5LDRmb2JAmsBQqwZvajg}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
     depends_on:
       postgres:

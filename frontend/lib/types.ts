@@ -76,3 +76,18 @@ export interface ReportResponse {
   document_count: number;
 }
 
+// Re-export component types for convenience
+export type {
+  ButtonProps,
+  BadgeProps,
+  StatusBadgeProps,
+  CardProps,
+  ModalProps,
+  InputProps,
+  SelectProps,
+  EmptyStateProps,
+  ToastProps,
+  TooltipProps,
+  DropdownMenuProps,
+} from "./component-types";
+
