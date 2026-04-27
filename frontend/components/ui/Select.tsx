@@ -17,10 +17,10 @@ export function Select({
 }: SelectProps) {
   const selectId = props.id || `select-${Math.random().toString(36).substr(2, 9)}`;
   
-  const baseSelectClasses = "block w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed bg-white text-gray-900";
+  const baseSelectClasses = "block w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-[3px] focus:ring-offset-0 transition-colors disabled:bg-slate-100 disabled:cursor-not-allowed bg-white text-slate-700";
   const errorClasses = error
-    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500";
+    ? "border-red-300 focus:ring-red-500/20 focus:border-red-500"
+    : "border-slate-200 focus:ring-[3px] focus:ring-blue-500/15 focus:border-blue-500";
   
   const widthClass = fullWidth ? "w-full" : "";
   
@@ -29,7 +29,7 @@ export function Select({
       {label && (
         <label
           htmlFor={selectId}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-slate-600 mb-1"
         >
           {label}
           {props.required && <span className="text-red-500 ml-1">*</span>}
@@ -67,7 +67,7 @@ export function Select({
       )}
       
       {helperText && !error && (
-        <p id={`${selectId}-helper`} className="mt-1 text-sm text-gray-500">
+        <p id={`${selectId}-helper`} className="mt-1 text-xs text-slate-400">
           {helperText}
         </p>
       )}
