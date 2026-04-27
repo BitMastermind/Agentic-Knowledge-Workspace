@@ -1,28 +1,76 @@
 @import "tailwindcss";
 
+/* =============================================
+   DESIGN TOKENS
+   ============================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Color palette */
+  --color-brand-dark:    #0F172A;
+  --color-primary:       #2563EB;
+  --color-accent:        #7C3AED;
+
+  --color-bg-base:       #F8FAFC;
+  --color-bg-surface:    #FFFFFF;
+  --color-bg-subtle:     #F1F5F9;
+  --color-bg-muted:      #E2E8F0;
+
+  --color-text-primary:  #0F172A;
+  --color-text-secondary:#475569;
+  --color-text-muted:    #94A3B8;
+
+  --color-border-default:#E2E8F0;
+  --color-border-strong: #CBD5E1;
+
+  --color-success:       #16A34A;
+  --color-warning:       #D97706;
+  --color-error:         #DC2626;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
+  --shadow-md: 0 4px 12px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.05);
+  --shadow-lg: 0 12px 32px rgba(15,23,42,0.10), 0 4px 8px rgba(15,23,42,0.06);
 }
 
+/* =============================================
+   TAILWIND v4 THEME — registers utility classes
+   ============================================= */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Fonts (CSS vars set by next/font at runtime) */
+  --font-display: var(--font-heading);
+  --font-sans: var(--font-body);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Color utilities */
+  --color-brand-dark:     var(--color-brand-dark);
+  --color-primary:        var(--color-primary);
+  --color-accent:         var(--color-accent);
+  --color-bg-base:        var(--color-bg-base);
+  --color-bg-surface:     var(--color-bg-surface);
+  --color-bg-subtle:      var(--color-bg-subtle);
+  --color-bg-muted:       var(--color-bg-muted);
+  --color-text-primary:   var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted:     var(--color-text-muted);
+  --color-border-default: var(--color-border-default);
+  --color-border-strong:  var(--color-border-strong);
+  --color-success:        var(--color-success);
+  --color-warning:        var(--color-warning);
+  --color-error:          var(--color-error);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* =============================================
+   BASE STYLES
+   ============================================= */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-body), 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Heading utility (used via className="font-display") */
+.font-display {
+  font-family: var(--font-heading), 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 /* KaTeX math overflow handling */
@@ -35,11 +83,8 @@ body {
   text-align: center;
 }
 
-.katex {
-  font-size: 1.1em;
-}
+.katex { font-size: 1.1em; }
 
-/* Ensure math blocks scroll horizontally if needed */
 .katex-display > .katex {
   display: inline-block;
   text-align: left;
@@ -55,8 +100,8 @@ body {
 /* Scrollbar styling */
 .overflow-y-auto::-webkit-scrollbar,
 .overflow-x-auto::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-track,
@@ -66,67 +111,36 @@ body {
 
 .overflow-y-auto::-webkit-scrollbar-thumb,
 .overflow-x-auto::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
+  background: #CBD5E1;
+  border-radius: 3px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover,
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #94A3B8;
 }
 
-/* Animation utilities */
+/* =============================================
+   ANIMATION UTILITIES
+   ============================================= */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes slide-in-from-bottom {
-  from {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
 }
 
 @keyframes zoom-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 
-.animate-in {
-  animation-fill-mode: both;
-}
-
-.fade-in {
-  animation-name: fade-in;
-}
-
-.slide-in-from-bottom-2 {
-  animation-name: slide-in-from-bottom;
-}
-
-.zoom-in-95 {
-  animation-name: zoom-in;
-}
-
-.duration-200 {
-  animation-duration: 200ms;
-}
-
-.duration-300 {
-  animation-duration: 300ms;
-}
+.animate-in { animation-fill-mode: both; }
+.fade-in { animation-name: fade-in; }
+.slide-in-from-bottom-2 { animation-name: slide-in-from-bottom; }
+.zoom-in-95 { animation-name: zoom-in; }
+.duration-200 { animation-duration: 200ms; }
+.duration-300 { animation-duration: 300ms; }
