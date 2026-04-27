@@ -14,8 +14,10 @@ export function Card({
   hover = false,
   className = "",
 }: CardProps) {
-  const baseClasses = "bg-white rounded-lg shadow border border-gray-200";
-  const hoverClass = hover ? "hover:shadow-md hover:border-gray-300 transition-all duration-200 ease-in-out cursor-pointer" : "";
+  const baseClasses = "bg-white rounded-xl border border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  const hoverClass = hover
+    ? "hover:shadow-[0_4px_12px_rgba(15,23,42,0.08),_0_1px_3px_rgba(15,23,42,0.05)] hover:-translate-y-px hover:border-slate-300 transition-all duration-150 ease-in-out cursor-pointer"
+    : "";
   
   const paddingClasses = {
     none: "",
@@ -27,7 +29,7 @@ export function Card({
   return (
     <div className={`${baseClasses} ${hoverClass} ${className}`}>
       {header && (
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-slate-200">
           {header}
         </div>
       )}
@@ -35,7 +37,7 @@ export function Card({
         {children}
       </div>
       {footer && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
           {footer}
         </div>
       )}
