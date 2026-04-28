@@ -40,12 +40,12 @@ export default function AuditLogPage() {
       return;
     }
     loadAuditLog();
-    
+
     // Refresh audit log every 5 seconds
     const interval = setInterval(() => {
       loadAuditLog();
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, [userIsAdmin, router]);
 
@@ -82,7 +82,7 @@ export default function AuditLogPage() {
     if (dateFilter !== "all") {
       const now = new Date();
       const filterDate = new Date();
-      
+
       switch (dateFilter) {
         case "today":
           filterDate.setHours(0, 0, 0, 0);
@@ -140,7 +140,7 @@ export default function AuditLogPage() {
   if (loading) {
     return (
       <div className="max-w-6xl">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Audit Log</h1>
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight mb-8">Audit Log</h1>
         <LoadingState>Loading audit log...</LoadingState>
       </div>
     );
@@ -151,8 +151,8 @@ export default function AuditLogPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Audit Log</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight">Audit Log</h1>
+            <p className="mt-2 text-sm text-slate-500">
               Track all administrative actions and changes
             </p>
           </div>
@@ -196,8 +196,8 @@ export default function AuditLogPage() {
 
       {/* Audit Log Table */}
       <Card>
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <div className="px-6 py-4 border-b border-slate-200">
+          <h2 className="font-display text-base font-bold text-slate-900">
             Activity Log ({filteredLog.length} entries)
           </h2>
         </div>
@@ -227,33 +227,33 @@ export default function AuditLogPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Timestamp
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Action
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     User
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {filteredLog.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-400">
                       {formatDateTime(entry.timestamp)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       {entry.action}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -272,10 +272,10 @@ export default function AuditLogPage() {
                         {entry.type}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                    <td className="px-6 py-4 text-sm text-slate-900 max-w-md truncate">
                       {entry.description}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
                       {entry.user_email}
                     </td>
                   </tr>
