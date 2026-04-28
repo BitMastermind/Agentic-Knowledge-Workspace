@@ -32,11 +32,11 @@ export function MarkdownWithLatex({ content, className = "" }: MarkdownWithLatex
         li: ({ children }) => <li className="mb-1 break-words">{children}</li>,
         code: ({ inline, children, ...props }: any) => {
           return inline ? (
-            <code className="bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono break-all" {...props}>
+            <code className="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded text-sm font-mono break-all" {...props}>
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-800 text-gray-100 p-3 rounded-lg overflow-x-auto my-3 max-w-full">
+            <pre className="bg-slate-800 text-slate-100 p-3 rounded-lg overflow-x-auto my-3 max-w-full">
               <code className="text-sm font-mono block" {...props}>
                 {children}
               </code>
@@ -48,7 +48,7 @@ export function MarkdownWithLatex({ content, className = "" }: MarkdownWithLatex
         h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3 break-words">{children}</h2>,
         h3: ({ children }) => <h3 className="text-base font-semibold mb-2 mt-2 break-words">{children}</h3>,
         blockquote: ({ children }) => (
-          <blockquote className="border-l-4 border-gray-400 pl-4 italic my-3 break-words">
+          <blockquote className="border-l-4 border-slate-400 pl-4 italic my-3 break-words">
             {children}
           </blockquote>
         ),
