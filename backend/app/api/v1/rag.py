@@ -1,5 +1,6 @@
 """RAG query endpoints with streaming support."""
 
+import asyncio
 import json
 import time
 from typing import AsyncIterator
@@ -14,6 +15,7 @@ from app.services.retriever import RetrieverService
 from app.services.answer_engine import AnswerEngineService
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.services.evaluation import evaluation_service
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -112,7 +114,19 @@ async def query_documents(
             latency_ms=latency_ms,
             tenant_id=current_user["tenant_id"],
         )
-        
+
+        # Record evaluation run asynchronously — does not block the response
+        asyncio.create_task(
+            evaluation_service.record_query(
+                tenant_id=current_user["tenant_id"],
+                user_id=current_user["user_id"],
+                query=request.query,
+                answer=answer,
+                sources=sources,
+                latency_ms=latency_ms,
+            )
+        )
+
         return {
             "answer": answer,
             "sources": sources,
@@ -141,11 +155,10 @@ async def query_documents_stream(
     async def generate() -> AsyncIterator[str]:
         """Generate streaming response with professional answer engine."""
         try:
-            # Check if query is conversational (before retrieval to save resources)
+            import time
+            start_time = time.time()
+
             is_conversational = answer_engine._is_conversational_query(request.query)
-            
-            # 1. Retrieve relevant chunks with advanced retrieval pipeline
-            # Skip retrieval for conversational queries
             chunks = []
             if not is_conversational:
                 chunks = await retriever_service.retrieve(
@@ -153,21 +166,19 @@ async def query_documents_stream(
                     query=request.query,
                     tenant_id=current_user["tenant_id"],
                     document_ids=request.document_ids,
-                    top_k=15,  # Increased for more comprehensive answers
+                    top_k=15,
                 )
-            
-            # 2. Stream professional answer using answer engine
+
+            full_answer_tokens: list[str] = []
+
             async for token in answer_engine.generate_answer_stream(
                 query=request.query,
                 chunks=chunks,
             ):
-                token_data = {
-                    "type": "token",
-                    "content": token,
-                }
+                full_answer_tokens.append(token)
+                token_data = {"type": "token", "content": token}
                 yield f"data: {json.dumps(token_data)}\n\n"
-            
-            # 3. Send sources at the end (only if chunks are relevant)
+
             sources = []
             if chunks and answer_engine._chunks_are_relevant(chunks):
                 for chunk in chunks[:5]:
@@ -177,29 +188,35 @@ async def query_documents_stream(
                         "snippet": chunk["content"][:200] + "..." if len(chunk["content"]) > 200 else chunk["content"],
                         "metadata": chunk["metadata"],
                     })
-            
-            sources_data = {
-                "type": "sources",
-                "sources": sources,
-            }
+
+            sources_data = {"type": "sources", "sources": sources}
             yield f"data: {json.dumps(sources_data)}\n\n"
-            
-            # 4. Send completion signal
+
+            # Record evaluation run after streaming completes
+            latency_ms = (time.time() - start_time) * 1000
+            asyncio.create_task(
+                evaluation_service.record_query(
+                    tenant_id=current_user["tenant_id"],
+                    user_id=current_user["user_id"],
+                    query=request.query,
+                    answer="".join(full_answer_tokens),
+                    sources=sources,
+                    latency_ms=latency_ms,
+                )
+            )
+
             yield "data: [DONE]\n\n"
-            
+
             logger.info(
                 "rag_stream_completed",
                 query=request.query[:100],
                 chunks_found=len(chunks),
                 tenant_id=current_user["tenant_id"],
             )
-            
+
         except Exception as e:
             logger.error("rag_stream_failed", error=str(e), query=request.query[:100])
-            error_data = {
-                "type": "error",
-                "content": f"An error occurred: {str(e)}",
-            }
+            error_data = {"type": "error", "content": f"An error occurred: {str(e)}"}
             yield f"data: {json.dumps(error_data)}\n\n"
             yield "data: [DONE]\n\n"
     
