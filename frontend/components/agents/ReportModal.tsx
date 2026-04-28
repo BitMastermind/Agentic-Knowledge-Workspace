@@ -120,12 +120,12 @@ export function ReportModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
             Select Documents *
           </label>
-          <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+          <div className="border border-slate-300 rounded-lg max-h-48 overflow-y-auto">
             {documents.length === 0 ? (
-              <div className="p-4 text-gray-500 text-sm text-center">
+              <div className="p-4 text-slate-500 text-sm text-center">
                 No completed documents available
               </div>
             ) : (
@@ -133,7 +133,7 @@ export function ReportModal({
                 {documents.map((doc) => (
                   <label
                     key={doc.id}
-                    className="flex items-center p-3 hover:bg-gray-50 cursor-pointer"
+                    className="flex items-center p-3 hover:bg-slate-50 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -141,7 +141,7 @@ export function ReportModal({
                       onChange={() => toggleDocument(doc.id)}
                       className="mr-3 rounded"
                     />
-                    <span className="text-sm text-gray-900">{doc.filename}</span>
+                    <span className="text-sm text-slate-900">{doc.filename}</span>
                   </label>
                 ))}
               </div>
