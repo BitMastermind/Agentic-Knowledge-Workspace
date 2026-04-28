@@ -37,14 +37,20 @@ class LangSmithService:
         if self._judge_llm is not None:
             return self._judge_llm
 
-        if settings.LLM_PROVIDER == "openai":
+        if settings.LLM_PROVIDER == "groq":
+            self._judge_llm = ChatOpenAI(
+                model=settings.LLM_MODEL,
+                api_key=settings.GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=0.0,
+            )
+        elif settings.LLM_PROVIDER == "openai":
             self._judge_llm = ChatOpenAI(
                 model=settings.LLM_MODEL,
                 api_key=settings.OPENAI_API_KEY,
                 temperature=0.0,
             )
         else:
-            # Default to Gemini
             self._judge_llm = ChatGoogleGenerativeAI(
                 model=settings.LLM_MODEL,
                 google_api_key=settings.GOOGLE_API_KEY,

@@ -48,10 +48,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
-    
+    GROQ_API_KEY: str = ""
+
     # LLM Configuration
-    LLM_PROVIDER: str = "gemini"  # "openai", "anthropic", or "gemini"
-    LLM_MODEL: str = "gemini-1.5-flash"  # or "gemini-1.5-pro"
+    LLM_PROVIDER: str = "gemini"  # "openai", "anthropic", "gemini", or "groq"
+    LLM_MODEL: str = "gemini-1.5-flash"
     
     # Embeddings Configuration (FREE, LOCAL - No API needed!)
     EMBEDDING_PROVIDER: str = "local"  # local (free, no API) or "gemini" or "openai"

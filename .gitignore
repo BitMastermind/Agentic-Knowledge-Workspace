@@ -81,3 +81,11 @@ TOP_INTERVIEW_QUESTIONS.md
 
 # Cursor IDE files
 .cursorrules
+
+# AI-generated planning and review files (keep local)
+.superpowers/
+IMPLEMENTATION_PLAN.md
+UI_UX_REVIEW.md
+TODO.md
+docs/superpowers/
+screenshots/

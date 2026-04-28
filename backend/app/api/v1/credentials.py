@@ -33,7 +33,7 @@ class CredentialsResponse(BaseModel):
     created_at: str
 
 
-@router.post("/credentials", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def save_credentials(
     request: SaveCredentialsRequest,
     current_user: dict = Depends(require_role("admin")),  # Only admins can manage credentials
@@ -89,7 +89,7 @@ async def save_credentials(
         )
 
 
-@router.get("/credentials", response_model=list[CredentialsResponse])
+@router.get("", response_model=list[CredentialsResponse])
 async def list_credentials(
     current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
@@ -108,7 +108,7 @@ async def list_credentials(
         )
 
 
-@router.delete("/credentials/{integration_type}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{integration_type}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_credentials(
     integration_type: str,
     current_user: dict = Depends(require_role("admin")),

@@ -2,6 +2,7 @@
 
 from typing import List, Dict
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
 from app.core.config import settings
@@ -106,14 +107,28 @@ Remember: Be COMPLETE, cite from multiple sources, use LaTeX for all math, cover
         """Initialize the answer engine with LLM."""
         self.llm = None
 
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
+    def _get_llm(self):
         """Get or create LLM instance."""
         if not self.llm:
-            self.llm = ChatGoogleGenerativeAI(
-                model=settings.LLM_MODEL,
-                google_api_key=settings.GOOGLE_API_KEY,
-                temperature=0.5,  # Lower for more consistent formatting
-            )
+            if settings.LLM_PROVIDER == "groq":
+                self.llm = ChatOpenAI(
+                    model=settings.LLM_MODEL,
+                    api_key=settings.GROQ_API_KEY,
+                    base_url="https://api.groq.com/openai/v1",
+                    temperature=0.5,
+                )
+            elif settings.LLM_PROVIDER == "openai":
+                self.llm = ChatOpenAI(
+                    model=settings.LLM_MODEL,
+                    api_key=settings.OPENAI_API_KEY,
+                    temperature=0.5,
+                )
+            else:
+                self.llm = ChatGoogleGenerativeAI(
+                    model=settings.LLM_MODEL,
+                    google_api_key=settings.GOOGLE_API_KEY,
+                    temperature=0.5,
+                )
         return self.llm
 
     def _is_conversational_query(self, query: str) -> bool:
@@ -348,12 +363,28 @@ User Question: {query}
 Provide a professional, well-structured answer using the format specified in your instructions. Remember to cite sources with [1], [2], etc. when using information from the context."""
 
             # Stream answer
-            llm = ChatGoogleGenerativeAI(
-                model=settings.LLM_MODEL,
-                google_api_key=settings.GOOGLE_API_KEY,
-                temperature=0.5,
-                streaming=True,
-            )
+            if settings.LLM_PROVIDER == "groq":
+                llm = ChatOpenAI(
+                    model=settings.LLM_MODEL,
+                    api_key=settings.GROQ_API_KEY,
+                    base_url="https://api.groq.com/openai/v1",
+                    temperature=0.5,
+                    streaming=True,
+                )
+            elif settings.LLM_PROVIDER == "openai":
+                llm = ChatOpenAI(
+                    model=settings.LLM_MODEL,
+                    api_key=settings.OPENAI_API_KEY,
+                    temperature=0.5,
+                    streaming=True,
+                )
+            else:
+                llm = ChatGoogleGenerativeAI(
+                    model=settings.LLM_MODEL,
+                    google_api_key=settings.GOOGLE_API_KEY,
+                    temperature=0.5,
+                    streaming=True,
+                )
             
             messages = [
                 SystemMessage(content=self.SYSTEM_PROMPT),

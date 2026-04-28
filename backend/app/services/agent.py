@@ -35,7 +35,14 @@ class AgentService:
             report_generator: Function to generate reports from documents
         """
         # Initialize LLM based on provider
-        if settings.LLM_PROVIDER == "gemini":
+        if settings.LLM_PROVIDER == "groq":
+            self.llm = ChatOpenAI(
+                model=settings.LLM_MODEL,
+                api_key=settings.GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=0.7,
+            )
+        elif settings.LLM_PROVIDER == "gemini":
             self.llm = ChatGoogleGenerativeAI(
                 model=settings.LLM_MODEL,
                 google_api_key=settings.GOOGLE_API_KEY,
