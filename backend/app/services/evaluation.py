@@ -2,14 +2,13 @@
 """Records RAG query runs and triggers background LLM-as-judge scoring."""
 
 import asyncio
-from typing import Optional
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
 from app.core.logging import get_logger
 from app.models.evaluation import EvaluationRun
 from app.services.langsmith import LangSmithService
+
+_background_tasks: set = set()
 
 logger = get_logger(__name__)
 _langsmith = LangSmithService()
@@ -22,7 +21,7 @@ class EvaluationService:
         user_id: int,
         query: str,
         answer: str,
-        sources: list,
+        sources: list[dict],
         latency_ms: float,
     ) -> int:
         """Insert an EvaluationRun row and fire background quality scoring.
@@ -46,9 +45,11 @@ class EvaluationService:
 
         if sources:
             context = " ".join(s.get("snippet", "") for s in sources)
-            asyncio.create_task(
+            task = asyncio.create_task(
                 self._score_in_background(run_id, query, answer, context)
             )
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
 
         return run_id
 
