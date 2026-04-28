@@ -91,7 +91,7 @@ export function Tooltip({
       {isVisible && (
         <div
           ref={tooltipRef}
-          className={`absolute z-50 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded shadow-lg pointer-events-none ${className}`}
+          className={`absolute z-50 px-2 py-1 text-xs font-medium text-white bg-slate-900 rounded shadow-lg pointer-events-none ${className}`}
           style={{
             top: `${tooltipPosition.top}px`,
             left: `${tooltipPosition.left}px`,
@@ -101,12 +101,12 @@ export function Tooltip({
           <div
             className={`absolute w-0 h-0 border-4 ${
               position === "top"
-                ? "top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-r-transparent border-b-transparent border-l-transparent"
+                ? "top-full left-1/2 -translate-x-1/2 border-t-slate-900 border-r-transparent border-b-transparent border-l-transparent"
                 : position === "bottom"
-                ? "bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-r-transparent border-t-transparent border-l-transparent"
+                ? "bottom-full left-1/2 -translate-x-1/2 border-b-slate-900 border-r-transparent border-t-transparent border-l-transparent"
                 : position === "left"
-                ? "left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-r-transparent border-t-transparent border-b-transparent"
-                : "right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-l-transparent border-t-transparent border-b-transparent"
+                ? "left-full top-1/2 -translate-y-1/2 border-l-slate-900 border-r-transparent border-t-transparent border-b-transparent"
+                : "right-full top-1/2 -translate-y-1/2 border-r-slate-900 border-l-transparent border-t-transparent border-b-transparent"
             }`}
           />
         </div>

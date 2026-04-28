@@ -53,7 +53,7 @@ export function LoadingState({
     <div className={`flex items-center justify-center p-8 ${className}`}>
       <div className="text-center">
         <Spinner size="lg" className="mx-auto mb-4" />
-        {children && <p className="text-gray-500 mt-2">{children}</p>}
+        {children && <p className="text-slate-500 mt-2">{children}</p>}
       </div>
     </div>
   );

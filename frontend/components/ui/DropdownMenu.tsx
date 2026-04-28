@@ -60,12 +60,12 @@ export function DropdownMenu({
       {isOpen && (
         <div
           ref={menuRef}
-          className={`absolute ${alignClasses[align]} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}
+          className={`absolute ${alignClasses[align]} mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50`}
           role="menu"
         >
           {items.map((item, index) => {
             if (item.divider) {
-              return <hr key={`divider-${index}`} className="my-1 border-gray-200" />;
+              return <hr key={`divider-${index}`} className="my-1 border-slate-200" />;
             }
             
             return (
@@ -78,12 +78,12 @@ export function DropdownMenu({
                   }
                 }}
                 disabled={item.disabled}
-                className={`w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 ${
+                className={`w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2 ${
                   item.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                 }`}
                 role="menuitem"
               >
-                {item.icon && <span className="text-gray-400">{item.icon}</span>}
+                {item.icon && <span className="text-slate-400">{item.icon}</span>}
                 {item.label}
               </button>
             );

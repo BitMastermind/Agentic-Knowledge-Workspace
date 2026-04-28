@@ -67,7 +67,7 @@ export function MessageActions({
         items={menuItems}
         trigger={
           <button
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors"
             aria-label="More options"
             title="More options"
           >
@@ -86,7 +86,7 @@ export function MessageActions({
             className={`p-1 rounded ${
               currentFeedback === "thumbs_up"
                 ? "bg-green-100 text-green-700"
-                : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             }`}
             aria-label="Thumbs up"
           >
@@ -97,7 +97,7 @@ export function MessageActions({
             className={`p-1 rounded ${
               currentFeedback === "thumbs_down"
                 ? "bg-red-100 text-red-700"
-                : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             }`}
             aria-label="Thumbs down"
           >

@@ -39,7 +39,7 @@ export function MessageContextMenu({
       items={menuItems}
       trigger={
         <button
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
           aria-label="Message actions"
         >
           ⋮
