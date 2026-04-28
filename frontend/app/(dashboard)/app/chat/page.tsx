@@ -33,7 +33,7 @@ function CitationWithTooltip({
     <span className="relative inline-block">
       <button
         onClick={onClick}
-        className="text-blue-600 font-medium cursor-pointer hover:text-blue-700 mx-0.5 px-1 rounded hover:bg-blue-50 transition-colors text-sm"
+        className="inline-flex items-center justify-center w-5 h-5 bg-violet-50 text-violet-700 font-bold text-[10px] rounded mx-0.5 hover:bg-violet-100 transition-colors cursor-pointer"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
@@ -41,14 +41,14 @@ function CitationWithTooltip({
       </button>
       {showTooltip && source && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 max-w-sm pointer-events-none">
-          <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 border border-gray-700">
+          <div className="bg-slate-900 text-white text-xs rounded-lg shadow-xl p-3 border border-slate-700">
             <div className="font-medium text-blue-300 mb-1 truncate">
               {source.document_name}
             </div>
-            <div className="text-gray-200 leading-relaxed line-clamp-3">
+            <div className="text-slate-200 leading-relaxed line-clamp-3">
               {source.snippet}
             </div>
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900" />
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-900" />
           </div>
         </div>
       )}
@@ -69,7 +69,7 @@ function AnswerWithCitations({
   onCitationClick?: () => void;
 }) {
   return (
-    <div className="text-[15px] leading-relaxed text-gray-900">
+    <div className="text-[15px] leading-relaxed text-slate-900">
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
         rehypePlugins={[rehypeKatex]}
@@ -94,7 +94,7 @@ function AnswerWithCitations({
         em: ({ children }) => <em className="italic">{children}</em>,
         code: ({ inline, children, ...props }: any) => {
           return inline ? (
-            <code className="bg-gray-200 text-gray-800 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
+            <code className="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
               {children}
             </code>
           ) : (
@@ -106,7 +106,7 @@ function AnswerWithCitations({
         pre: ({ children, ...props }: any) => {
           // Pre component wraps block code - ensure it's not nested in p
           return (
-            <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto my-3 max-w-full text-sm" {...props}>
+            <pre className="bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto my-3 max-w-full text-sm" {...props}>
               {children}
             </pre>
           );
@@ -116,7 +116,7 @@ function AnswerWithCitations({
         h3: ({ children }) => <h3 className="text-lg font-medium mb-2 mt-3 first:mt-0">{children}</h3>,
         h4: ({ children }) => <h4 className="text-base font-medium mb-2 mt-3">{children}</h4>,
         blockquote: ({ children }) => (
-          <blockquote className="border-l-4 border-gray-200 pl-4 italic my-3 text-gray-600">
+          <blockquote className="border-l-4 border-slate-200 pl-4 italic my-3 text-slate-600">
             {children}
           </blockquote>
         ),
@@ -151,7 +151,7 @@ function AnswerWithCitations({
             </a>
           );
         },
-        hr: () => <hr className="my-6 border-gray-300" />,
+        hr: () => <hr className="my-6 border-slate-300" />,
         // Custom text renderer to handle citations
         text: ({ children }: any) => {
           const text = String(children);
@@ -242,12 +242,12 @@ function ReportViewerModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        <div className="p-6 border-b border-slate-200 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Report Viewer</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Report Viewer</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="text-slate-400 hover:text-slate-600 text-2xl"
             >
               ×
             </button>
@@ -257,7 +257,7 @@ function ReportViewerModal({
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="text-gray-500">Loading report...</div>
+              <div className="text-slate-500">Loading report...</div>
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded text-sm">
@@ -299,16 +299,16 @@ function ActionButton({
         onClick={onClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className={`p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors ${className}`}
+        className={`p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors ${className}`}
         aria-label={ariaLabel}
       >
         {children}
       </button>
       {showTooltip && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none">
-          <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          <div className="bg-slate-900 text-white text-xs font-medium px-2 py-1 rounded shadow-lg whitespace-nowrap">
             {label}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900" />
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-900" />
           </div>
         </div>
       )}
@@ -644,12 +644,12 @@ export default function ChatPage() {
     <div className="h-full flex flex-col bg-white">
       {/* Minimal Header - Only show when there are messages */}
       {messages.length > 0 && (
-        <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0 bg-white">
+        <div className="border-b border-slate-200 px-6 py-3 flex-shrink-0 bg-white">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <h1 className="text-lg font-medium text-gray-900">Chat</h1>
+            <h1 className="font-display text-sm font-bold text-slate-900">Chat</h1>
             <button
               onClick={handleClearChat}
-              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition"
+              className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all"
               title="Clear chat history"
             >
               Clear
@@ -686,20 +686,16 @@ export default function ChatPage() {
           {messages.length === 0 ? (
             <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
               <div className="text-center w-full max-w-xl">
-                <h2 className="text-3xl font-light text-gray-900 mb-4">
-                  What's on your mind today?
-                </h2>
-                <p className="text-gray-500 text-sm mb-8">
-                  Ask questions about your documents and get AI-powered answers
-                </p>
-                
+                <h2 className="font-display text-2xl font-extrabold text-slate-900 tracking-tight mb-4">What's on your mind?</h2>
+                <p className="text-slate-400 text-sm mb-8">Ask questions about your uploaded documents and get instant answers</p>
+
                 {/* Example Questions - Cleaner design */}
                 <div className="space-y-2">
                   {EXAMPLE_QUESTIONS.map((question, idx) => (
                     <button
                       key={idx}
                       onClick={() => setInput(question)}
-                      className="w-full p-3 text-left text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                      className="w-full p-3 text-left text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-200"
                     >
                       {question}
                     </button>
@@ -720,12 +716,16 @@ export default function ChatPage() {
                   <div
                     className={`max-w-[85%] min-w-0 relative ${
                       message.role === "user"
-                        ? "bg-gray-900 text-white rounded-2xl rounded-tr-sm px-4 py-3"
-                        : "text-gray-900"
+                        ? "bg-slate-900 text-white rounded-2xl rounded-tr-sm px-4 py-3"
+                        : "text-slate-900"
                     }`}
                   >
                     {message.role === "assistant" ? (
-                      <div className="prose-content">
+                      <div className="flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5">
+                          ⚡
+                        </div>
+                        <div className="flex-1 prose-content min-w-0">
                         <AnswerWithCitations
                           content={message.content}
                           sources={message.sources}
@@ -737,21 +737,21 @@ export default function ChatPage() {
                           }}
                         />
                         {message.sources && message.sources.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="mt-4 pt-4 border-t border-slate-100">
                             <button
                               onClick={() => {
                                 setCurrentSources(message.sources!);
                                 setShowSourceSidebar(true);
                               }}
-                              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                              className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
                             >
                               View {message.sources.length} source{message.sources.length !== 1 ? 's' : ''}
                             </button>
                           </div>
                         )}
-                        
+
                         {/* All Action Icons at Bottom - ChatGPT Style */}
-                        <div className="mt-4 pt-3 flex items-center gap-1 border-t border-gray-100">
+                        <div className="mt-4 pt-3 flex items-center gap-1 border-t border-slate-100">
                           {/* Copy */}
                           <ActionButton
                             onClick={() => handleCopyMessage(message.content)}
@@ -868,6 +868,7 @@ export default function ChatPage() {
                             </ActionButton>
                           </div>
                         </div>
+                        </div>
                       </div>
                     ) : (
                       <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{message.content}</p>
@@ -875,7 +876,7 @@ export default function ChatPage() {
                     
                     {/* Timestamp - Minimal */}
                     {message.role === "user" && (
-                      <div className="mt-1 text-xs text-gray-400">
+                      <div className="mt-1 text-xs text-slate-400">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     )}
@@ -886,7 +887,7 @@ export default function ChatPage() {
               {/* Loading Indicator - Minimal */}
               {loading && loadingStage && (
                 <div className="flex justify-start">
-                  <div className="flex items-center gap-2 text-sm text-gray-500 px-4 py-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 px-4 py-2">
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
@@ -905,7 +906,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area - Clean ChatGPT-style */}
-      <div className="bg-white border-t border-gray-200 flex-shrink-0">
+      <div className="bg-white border-t border-slate-200 flex-shrink-0">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           {/* Document Selector - Minimal, only show when documents selected */}
           {selectedDocumentIds.length > 0 && (
@@ -922,7 +923,7 @@ export default function ChatPage() {
             <div className="mb-3 flex items-center justify-center">
               <button
                 onClick={handleStopGeneration}
-                className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
+                className="px-4 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition"
               >
                 Stop
               </button>
@@ -939,13 +940,13 @@ export default function ChatPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask anything"
                   disabled={loading}
-                  className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:opacity-50 transition-all text-[15px] text-gray-900 placeholder:text-gray-400"
+                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-[3px] focus:ring-blue-500/15 focus:border-blue-500 disabled:opacity-50 transition-all text-[15px] text-slate-900 placeholder:text-slate-400"
                 />
                 {/* Plus icon on left - for document selector */}
                 <button
                   type="button"
                   onClick={() => setShowDocumentSelector(!showDocumentSelector)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   title="Select documents"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -959,7 +960,7 @@ export default function ChatPage() {
                       className="fixed inset-0 z-40"
                       onClick={() => setShowDocumentSelector(false)}
                     />
-                    <div className="absolute bottom-full left-0 mb-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                    <div className="absolute bottom-full left-0 mb-2 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                       <DocumentSelector
                         selectedDocumentIds={selectedDocumentIds}
                         onSelectionChange={(ids) => {
@@ -976,7 +977,7 @@ export default function ChatPage() {
                     <button
                       type="button"
                       onClick={handleStopGeneration}
-                      className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                      className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
                       title="Stop generation"
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -986,7 +987,7 @@ export default function ChatPage() {
                   ) : input.trim() ? (
                     <button
                       type="submit"
-                      className="p-1.5 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                      className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all"
                       title="Send message"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1007,7 +1008,7 @@ export default function ChatPage() {
                   setShowEmailModal(true);
                 }}
                 disabled={loading}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5"
                 title="Email Draft"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1022,7 +1023,7 @@ export default function ChatPage() {
                   setShowJiraModal(true);
                 }}
                 disabled={loading}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5"
                 title="Jira Ticket"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1037,7 +1038,7 @@ export default function ChatPage() {
                   setShowReportModal(true);
                 }}
                 disabled={loading}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5"
                 title="Generate Report"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
