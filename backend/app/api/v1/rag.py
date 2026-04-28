@@ -24,6 +24,9 @@ router = APIRouter()
 retriever_service = RetrieverService()
 answer_engine = AnswerEngineService()
 
+# Guard against GC canceling background eval tasks
+_eval_tasks: set = set()
+
 
 class QueryRequest(BaseModel):
     """RAG query request."""
@@ -116,7 +119,7 @@ async def query_documents(
         )
 
         # Record evaluation run asynchronously — does not block the response
-        asyncio.create_task(
+        _task = asyncio.create_task(
             evaluation_service.record_query(
                 tenant_id=current_user["tenant_id"],
                 user_id=current_user["user_id"],
@@ -126,6 +129,8 @@ async def query_documents(
                 latency_ms=latency_ms,
             )
         )
+        _eval_tasks.add(_task)
+        _task.add_done_callback(_eval_tasks.discard)
 
         return {
             "answer": answer,
@@ -155,7 +160,6 @@ async def query_documents_stream(
     async def generate() -> AsyncIterator[str]:
         """Generate streaming response with professional answer engine."""
         try:
-            import time
             start_time = time.time()
 
             is_conversational = answer_engine._is_conversational_query(request.query)
@@ -179,6 +183,8 @@ async def query_documents_stream(
                 token_data = {"type": "token", "content": token}
                 yield f"data: {json.dumps(token_data)}\n\n"
 
+            latency_ms = (time.time() - start_time) * 1000
+
             sources = []
             if chunks and answer_engine._chunks_are_relevant(chunks):
                 for chunk in chunks[:5]:
@@ -193,8 +199,7 @@ async def query_documents_stream(
             yield f"data: {json.dumps(sources_data)}\n\n"
 
             # Record evaluation run after streaming completes
-            latency_ms = (time.time() - start_time) * 1000
-            asyncio.create_task(
+            _task = asyncio.create_task(
                 evaluation_service.record_query(
                     tenant_id=current_user["tenant_id"],
                     user_id=current_user["user_id"],
@@ -204,6 +209,8 @@ async def query_documents_stream(
                     latency_ms=latency_ms,
                 )
             )
+            _eval_tasks.add(_task)
+            _task.add_done_callback(_eval_tasks.discard)
 
             yield "data: [DONE]\n\n"
 
