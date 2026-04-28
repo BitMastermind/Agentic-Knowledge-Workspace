@@ -119,125 +119,148 @@ export default function DashboardLayout({
   const isChatPage = pathname === "/app/chat";
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-gray-50">
-      {/* Top Bar - Fixed height */}
-      <nav className="bg-white border-b border-gray-200 flex-shrink-0 h-16">
-        <div className="px-4 sm:px-6 lg:px-8 h-full">
-          <div className="flex justify-between h-full items-center">
-            <div className="flex items-center gap-3">
-              {/* Sidebar Toggle Button - Only show hamburger when sidebar is closed (ChatGPT style) */}
-              {!sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
-                  aria-label="Open sidebar"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Tenant Switcher */}
-              {tenants.length > 1 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowTenantDropdown(!showTenantDropdown)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <span className="text-gray-500">🏢</span>
-                    <span className="font-medium">
-                      {currentTenant?.name || "Select Tenant"}
-                    </span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  
-                  {showTenantDropdown && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setShowTenantDropdown(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                        {tenants.map((tenant) => (
-                          <button
-                            key={tenant.id}
-                            onClick={() => handleTenantSwitch(tenant.id)}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${
-                              currentTenant?.id === tenant.id
-                                ? "bg-blue-50 text-blue-700 font-medium"
-                                : "text-gray-700"
-                            }`}
-                          >
-                            <span>{tenant.name}</span>
-                            {currentTenant?.id === tenant.id && (
-                              <span className="text-blue-600">✓</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              
-              <span className="text-sm text-gray-700">{user?.email}</span>
+    <div className="fixed inset-0 flex flex-col bg-slate-50">
+      {/* Top Bar */}
+      <nav className="bg-white border-b border-slate-200 flex-shrink-0 h-14 z-10">
+        <div className="px-4 sm:px-6 h-full flex items-center gap-3">
+          {/* Hamburger — only when sidebar collapsed */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-900"
+              aria-label="Open sidebar"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+
+          {/* ⌘K command palette trigger */}
+          <button
+            onClick={() => setShowCommandPalette(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors ml-auto"
+          >
+            <span>Search</span>
+            <kbd className="font-mono text-[10px] bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-500">⌘K</kbd>
+          </button>
+
+          {/* Tenant switcher */}
+          {tenants.length > 1 && (
+            <div className="relative">
               <button
-                onClick={logout}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={() => setShowTenantDropdown(!showTenantDropdown)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                Logout
+                <span className="text-slate-400">🏢</span>
+                <span className="font-medium text-slate-700">{currentTenant?.name || "Select Tenant"}</span>
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+
+              {showTenantDropdown && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowTenantDropdown(false)} />
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-[0_4px_12px_rgba(15,23,42,0.08)] border border-slate-200 py-1 z-20">
+                    {tenants.map((tenant) => (
+                      <button
+                        key={tenant.id}
+                        onClick={() => handleTenantSwitch(tenant.id)}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center justify-between transition-colors ${
+                          currentTenant?.id === tenant.id
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : "text-slate-700"
+                        }`}
+                      >
+                        <span>{tenant.name}</span>
+                        {currentTenant?.id === tenant.id && (
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+          )}
+
+          {/* User avatar */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTenantDropdown(false)}
+              className="flex items-center gap-2 group"
+              title={user?.email}
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {user?.email?.[0]?.toUpperCase() ?? "U"}
+              </div>
+            </button>
           </div>
+
+          {/* Logout */}
+          <button
+            onClick={logout}
+            className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-2 py-1 rounded hover:bg-slate-100"
+          >
+            Logout
+          </button>
         </div>
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Collapsible */}
+        {/* Sidebar */}
         <aside
-          className={`bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto transition-all duration-300 ease-in-out flex flex-col ${
+          className={`bg-white border-r border-slate-200 flex-shrink-0 overflow-y-auto transition-all duration-300 ease-in-out flex flex-col shadow-[2px_0_8px_rgba(15,23,42,0.04)] ${
             sidebarOpen ? "w-64" : "w-16"
           }`}
         >
-          {/* Sidebar Header - Show "Agentic Workspace" when open, empty when collapsed (ChatGPT style) */}
+          {/* Brand header — expanded */}
           {sidebarOpen && (
-            <div className="px-4 py-4 border-b border-gray-200 flex-shrink-0">
+            <div className="px-4 py-4 border-b border-slate-200 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Agentic Workspace</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs">
+                    ⚡
+                  </div>
+                  <h2 className="font-display text-sm font-extrabold text-slate-900 tracking-tight">
+                    Agentic Workspace
+                  </h2>
+                </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label="Collapse sidebar"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
               </div>
             </div>
           )}
-          
-          <nav className="mt-5 px-2 space-y-6 flex-1">
+
+          {/* Brand icon — collapsed */}
+          {!sidebarOpen && (
+            <div className="px-3 py-4 border-b border-slate-200 flex-shrink-0 flex justify-center">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-sm">
+                ⚡
+              </div>
+            </div>
+          )}
+
+          {/* Nav */}
+          <nav className="mt-3 px-2 space-y-5 flex-1">
             {filteredSections.map((section, sectionIdx) => (
               <div key={sectionIdx}>
                 {section.title && sidebarOpen && (
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {section.title}
                   </div>
                 )}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {section.items.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -245,27 +268,24 @@ export default function DashboardLayout({
                         key={item.name}
                         href={item.href}
                         className={`group flex items-center ${
-                          sidebarOpen ? "px-2" : "px-2 justify-center"
-                        } py-2 text-sm font-medium rounded-md transition-colors relative ${
+                          sidebarOpen ? "px-3" : "px-2 justify-center"
+                        } py-2 text-sm font-medium rounded-lg transition-all duration-100 relative border-l-2 ${
                           isActive
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            ? "bg-blue-50 text-blue-600 border-l-blue-600 font-semibold"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-transparent"
                         }`}
                         title={!sidebarOpen ? item.name : undefined}
                       >
-                        <span className={`text-xl ${sidebarOpen ? "mr-3" : ""}`}>
+                        <span className={`text-base ${sidebarOpen ? "mr-2.5" : ""}`}>
                           {item.icon}
                         </span>
                         {sidebarOpen && (
-                          <span className="opacity-100 transition-opacity duration-200">
-                            {item.name}
-                          </span>
+                          <span>{item.name}</span>
                         )}
-                        {/* Tooltip for collapsed state */}
                         {!sidebarOpen && (
-                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                             {item.name}
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full border-4 border-transparent border-r-gray-900" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full border-4 border-transparent border-r-slate-900" />
                           </div>
                         )}
                       </Link>
@@ -275,6 +295,16 @@ export default function DashboardLayout({
               </div>
             ))}
           </nav>
+
+          {/* Footer user strip */}
+          {sidebarOpen && (
+            <div className="px-4 py-3 border-t border-slate-200 flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                {user?.email?.[0]?.toUpperCase() ?? "U"}
+              </div>
+              <span className="text-xs text-slate-400 truncate">{user?.email}</span>
+            </div>
+          )}
         </aside>
 
         {/* Main Content */}
