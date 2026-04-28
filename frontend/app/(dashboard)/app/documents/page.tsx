@@ -232,10 +232,8 @@ export default function DocumentsPage() {
   return (
     <div className="max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-        <p className="mt-2 text-gray-600">
-          Upload and manage your documents for AI processing
-        </p>
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight">Documents</h1>
+        <p className="mt-2 text-sm text-slate-500">Upload and manage your documents for AI processing</p>
       </div>
 
       {error && (
@@ -246,15 +244,15 @@ export default function DocumentsPage() {
 
       {/* Upload Section */}
       <Card className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Document</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Upload Document</h2>
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-150 cursor-pointer ${
             isDragging
               ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-blue-400"
+              : "border-slate-300 hover:border-blue-400 hover:bg-slate-50"
           } ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => !uploading && fileInputRef.current?.click()}
         >
@@ -269,21 +267,28 @@ export default function DocumentsPage() {
           <div className="space-y-2">
             {uploading ? (
               <>
-                <div className="text-4xl mb-2">⏳</div>
-                <p className="text-gray-600 font-medium">Uploading...</p>
-                <div className="w-full bg-gray-200 rounded-full h-2 max-w-md mx-auto mt-4">
-                  <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: "100%" }} />
+                <div className="text-2xl mb-2">⏳</div>
+                <p className="text-sm font-semibold text-slate-700">Uploading...</p>
+                <div className="w-full bg-slate-200 rounded-full h-1.5 max-w-xs mx-auto mt-4">
+                  <div className="bg-blue-500 h-1.5 rounded-full animate-pulse" style={{ width: "100%" }} />
                 </div>
               </>
             ) : (
               <>
-                <div className="text-4xl mb-2">📄</div>
-                <p className="text-gray-600 font-medium">
-                  {isDragging ? "Drop file here" : "Click to upload or drag and drop"}
+                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-sm text-2xl">
+                  📄
+                </div>
+                <p className="text-sm font-semibold text-slate-700">
+                  {isDragging ? "Drop file here" : "Drop files here or click to browse"}
                 </p>
-                <p className="text-sm text-gray-500">
-                  PDF, CSV, MD, TXT, DOCX (max 10MB)
-                </p>
+                <p className="text-xs text-slate-400 mt-1">PDF, CSV, MD, TXT, DOCX — max 10 MB</p>
+                <div className="flex gap-2 justify-center mt-3">
+                  {["PDF", "CSV", "MD", "TXT", "DOCX"].map((t) => (
+                    <span key={t} className="font-mono text-[10px] font-semibold bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-400">
+                      {t}
+                    </span>
+                  ))}
+                </div>
               </>
             )}
           </div>
@@ -299,7 +304,7 @@ export default function DocumentsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by filename..."
-            className="text-gray-900 placeholder:text-gray-400"
+            className="text-slate-900 placeholder:text-slate-400"
             leftIcon={<span>🔍</span>}
           />
 
@@ -331,8 +336,8 @@ export default function DocumentsPage() {
         </div>
 
         {selectedIds.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-            <span className="text-sm text-gray-600">
+          <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-sm text-slate-600 font-medium">
               {selectedIds.length} document{selectedIds.length !== 1 ? "s" : ""} selected
             </span>
             <Button variant="danger" size="sm" onClick={handleBulkDelete}>
@@ -344,12 +349,12 @@ export default function DocumentsPage() {
 
       {/* Documents List */}
       <Card>
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <h2 className="font-display text-xs font-bold text-slate-900 uppercase tracking-wide">
             Your Documents ({filteredDocuments.length})
           </h2>
           {filteredDocuments.length > 0 && (
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectedIds.length === filteredDocuments.length && filteredDocuments.length > 0}
@@ -388,11 +393,11 @@ export default function DocumentsPage() {
             }
           />
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-200">
             {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
+                className="px-6 py-3.5 flex items-center gap-3 hover:bg-slate-50 transition-colors"
               >
                 <input
                   type="checkbox"
@@ -400,21 +405,25 @@ export default function DocumentsPage() {
                   onChange={() => toggleSelect(doc.id)}
                   className="rounded"
                 />
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-sm flex-shrink-0">📄</div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">{doc.filename}</h3>
-                  <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                    <span>{doc.file_type.toUpperCase()}</span>
+                  <h3 className="font-medium text-slate-900 text-sm truncate">{doc.filename}</h3>
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-400">
+                    <span className="font-mono">{doc.file_type.toUpperCase()}</span>
                     <span>{formatFileSize(doc.file_size)}</span>
                     <span>{new Date(doc.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <StatusBadge status={doc.status as any} />
+                  <StatusBadge status={doc.status as any} size="sm" />
                   <button
                     onClick={() => handleDelete(doc.id)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete document"
                   >
-                    Delete
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
               </div>
