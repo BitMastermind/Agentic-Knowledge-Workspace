@@ -46,26 +46,39 @@ async def list_runs(
     db: AsyncSession = Depends(get_db),
 ):
     """List evaluation runs for the current tenant, newest first."""
-    result = await db.execute(
-        select(EvaluationRun)
-        .where(EvaluationRun.tenant_id == current_user["tenant_id"])
-        .order_by(EvaluationRun.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
-    runs = result.scalars().all()
-    return [
-        EvaluationRunResponse(
-            id=r.id,
-            query=r.query,
-            response=r.response,
-            latency_ms=r.latency_ms,
-            quality_score=r.quality_score,
-            user_feedback=r.user_feedback,
-            created_at=r.created_at.isoformat() if r.created_at else "",
+    try:
+        if limit < 1 or limit > 500:
+            limit = 50
+        if offset < 0:
+            offset = 0
+        result = await db.execute(
+            select(EvaluationRun)
+            .where(EvaluationRun.tenant_id == current_user["tenant_id"])
+            .order_by(EvaluationRun.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
-        for r in runs
-    ]
+        runs = result.scalars().all()
+        return [
+            EvaluationRunResponse(
+                id=r.id,
+                query=r.query,
+                response=r.response,
+                latency_ms=r.latency_ms,
+                quality_score=r.quality_score,
+                user_feedback=r.user_feedback,
+                created_at=r.created_at.isoformat() if r.created_at else "",
+            )
+            for r in runs
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("list_runs_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list evaluation runs: {str(e)}",
+        )
 
 
 @router.get("/metrics", response_model=EvaluationMetricsResponse)
@@ -74,34 +87,43 @@ async def get_metrics(
     db: AsyncSession = Depends(get_db),
 ):
     """Return aggregate quality metrics for the current tenant."""
-    tenant_id = current_user["tenant_id"]
+    try:
+        tenant_id = current_user["tenant_id"]
 
-    # Total count, avg latency, avg quality
-    agg_result = await db.execute(
-        select(
-            func.count(EvaluationRun.id).label("total"),
-            func.avg(EvaluationRun.latency_ms).label("avg_latency"),
-            func.avg(EvaluationRun.quality_score).label("avg_quality"),
-        ).where(EvaluationRun.tenant_id == tenant_id)
-    )
-    agg = agg_result.one()
-    total = agg.total or 0
-
-    # Thumbs-up count (separate query — simpler than CASE in SQLAlchemy async)
-    thumbs_result = await db.execute(
-        select(func.count(EvaluationRun.id)).where(
-            EvaluationRun.tenant_id == tenant_id,
-            EvaluationRun.user_feedback == "thumbs_up",
+        # Total count, avg latency, avg quality
+        agg_result = await db.execute(
+            select(
+                func.count(EvaluationRun.id).label("total"),
+                func.avg(EvaluationRun.latency_ms).label("avg_latency"),
+                func.avg(EvaluationRun.quality_score).label("avg_quality"),
+            ).where(EvaluationRun.tenant_id == tenant_id)
         )
-    )
-    thumbs_up = thumbs_result.scalar() or 0
+        agg = agg_result.one()
+        total = agg.total or 0
 
-    return EvaluationMetricsResponse(
-        total_queries=total,
-        avg_latency_ms=float(agg.avg_latency or 0),
-        avg_quality_score=float(agg.avg_quality or 0),
-        positive_feedback_rate=float(thumbs_up) / total if total > 0 else 0.0,
-    )
+        # Thumbs-up count (separate query — simpler than CASE in SQLAlchemy async)
+        thumbs_result = await db.execute(
+            select(func.count(EvaluationRun.id)).where(
+                EvaluationRun.tenant_id == tenant_id,
+                EvaluationRun.user_feedback == "thumbs_up",
+            )
+        )
+        thumbs_up = thumbs_result.scalar() or 0
+
+        return EvaluationMetricsResponse(
+            total_queries=total,
+            avg_latency_ms=float(agg.avg_latency or 0),
+            avg_quality_score=float(agg.avg_quality or 0),
+            positive_feedback_rate=float(thumbs_up) / total if total > 0 else 0.0,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_metrics_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get metrics: {str(e)}",
+        )
 
 
 @router.post("/feedback", status_code=status.HTTP_204_NO_CONTENT)
@@ -111,21 +133,30 @@ async def submit_feedback(
     db: AsyncSession = Depends(get_db),
 ):
     """Record thumbs-up or thumbs-down feedback for a run."""
-    if request.feedback not in ("thumbs_up", "thumbs_down"):
+    try:
+        if request.feedback not in ("thumbs_up", "thumbs_down"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="feedback must be 'thumbs_up' or 'thumbs_down'",
+            )
+
+        result = await db.execute(
+            select(EvaluationRun).where(
+                EvaluationRun.id == request.run_id,
+                EvaluationRun.tenant_id == current_user["tenant_id"],
+            )
+        )
+        run = result.scalar_one_or_none()
+        if not run:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+        run.user_feedback = request.feedback
+        await db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("submit_feedback_failed", error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="feedback must be 'thumbs_up' or 'thumbs_down'",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit feedback: {str(e)}",
         )
-
-    result = await db.execute(
-        select(EvaluationRun).where(
-            EvaluationRun.id == request.run_id,
-            EvaluationRun.tenant_id == current_user["tenant_id"],
-        )
-    )
-    run = result.scalar_one_or_none()
-    if not run:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-
-    run.user_feedback = request.feedback
-    await db.commit()
