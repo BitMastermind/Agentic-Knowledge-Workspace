@@ -2,7 +2,7 @@
 """Evaluation endpoints: run history, aggregate metrics, and feedback."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
@@ -40,17 +40,13 @@ class FeedbackRequest(BaseModel):
 
 @router.get("/runs", response_model=list[EvaluationRunResponse])
 async def list_runs(
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     current_user: dict = Depends(require_tenant_access),
     db: AsyncSession = Depends(get_db),
 ):
     """List evaluation runs for the current tenant, newest first."""
     try:
-        if limit < 1 or limit > 500:
-            limit = 50
-        if offset < 0:
-            offset = 0
         result = await db.execute(
             select(EvaluationRun)
             .where(EvaluationRun.tenant_id == current_user["tenant_id"])

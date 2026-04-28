@@ -2,7 +2,6 @@
 """Tests for evaluation endpoints and service."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from httpx import AsyncClient
 
 

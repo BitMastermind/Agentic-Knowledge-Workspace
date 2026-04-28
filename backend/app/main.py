@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import auth, tenants, documents, rag, agent, credentials, eval
+from app.api.v1 import auth, tenants, documents, rag, agent, credentials
+from app.api.v1 import eval as eval_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.logging import setup_logging
@@ -75,7 +76,7 @@ app.include_router(agent.router, prefix=f"/api/{settings.API_VERSION}/agent", ta
 app.include_router(
     credentials.router, prefix=f"/api/{settings.API_VERSION}/credentials", tags=["credentials"]
 )
-app.include_router(eval.router, prefix=f"/api/{settings.API_VERSION}/eval", tags=["eval"])
+app.include_router(eval_router.router, prefix=f"/api/{settings.API_VERSION}/eval", tags=["eval"])
 
 
 if __name__ == "__main__":

@@ -218,6 +218,7 @@ async def query_documents_stream(
                 "rag_stream_completed",
                 query=request.query[:100],
                 chunks_found=len(chunks),
+                latency_ms=latency_ms,
                 tenant_id=current_user["tenant_id"],
             )
 
