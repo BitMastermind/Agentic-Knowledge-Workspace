@@ -28,10 +28,10 @@ export function Toast({
   }, [duration, onClose]);
   
   const typeClasses = {
-    success: "bg-green-50 border-green-200 text-green-800",
-    error: "bg-red-50 border-red-200 text-red-800",
-    warning: "bg-amber-50 border-amber-200 text-amber-800",
-    info: "bg-blue-50 border-blue-200 text-blue-800",
+    success: "bg-white border-slate-200 border-l-4 border-l-green-500 text-slate-800",
+    error:   "bg-white border-slate-200 border-l-4 border-l-red-500 text-slate-800",
+    warning: "bg-white border-slate-200 border-l-4 border-l-amber-500 text-slate-800",
+    info:    "bg-white border-slate-200 border-l-4 border-l-blue-500 text-slate-800",
   };
   
   const iconMap = {
@@ -45,7 +45,7 @@ export function Toast({
   
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border rounded-lg shadow-lg ${typeClasses[type]} ${className} transition-opacity duration-300`}
+      className={`flex items-start gap-3 px-4 py-3 border rounded-lg shadow-[0_4px_12px_rgba(15,23,42,0.08)] ${typeClasses[type]} ${className} transition-opacity duration-300`}
       role="alert"
     >
       <span className="text-lg flex-shrink-0">{iconMap[type]}</span>
@@ -59,7 +59,7 @@ export function Toast({
             setIsVisible(false);
             setTimeout(() => onClose(), 300);
           }}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 text-lg leading-none"
+          className="flex-shrink-0 text-slate-400 hover:text-slate-600 text-lg leading-none"
           aria-label="Close"
         >
           ×

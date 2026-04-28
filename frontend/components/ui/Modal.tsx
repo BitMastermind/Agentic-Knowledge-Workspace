@@ -56,23 +56,23 @@ export function Modal({
       }}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300 animate-in fade-in" />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in" />
       
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-2xl shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 ${className}`}
+        className={`relative bg-white rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.10)] ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
             {title && (
-              <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+              <h2 className="font-display text-lg font-bold text-slate-900">{title}</h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none transition-colors"
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none transition-colors rounded-md hover:bg-slate-100 w-7 h-7 flex items-center justify-center"
                 aria-label="Close modal"
               >
                 ×
