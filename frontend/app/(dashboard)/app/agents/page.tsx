@@ -66,7 +66,7 @@ export default function AgentsPage() {
           ...action,
           timestamp: new Date(action.timestamp),
         }));
-        setAgentHistory(history.sort((a: AgentAction, b: AgentAction) => 
+        setAgentHistory(history.sort((a: AgentAction, b: AgentAction) =>
           b.timestamp.getTime() - a.timestamp.getTime()
         ));
       }
@@ -85,10 +85,10 @@ export default function AgentsPage() {
         timestamp: a.timestamp.toISOString(),
       })))
     );
-    
+
     // Log to audit log
     logAuditEvent(
-      action.status === "success" 
+      action.status === "success"
         ? `${action.type === "email" ? "Email" : action.type === "jira" ? "Jira ticket" : "Report"} ${action.type === "email" ? "sent" : action.type === "jira" ? "created" : "generated"}`
         : `Agent action failed: ${action.type}`,
       "agent",
@@ -115,7 +115,7 @@ export default function AgentsPage() {
   if (loading) {
     return (
       <div className="max-w-6xl">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">AI Agents</h1>
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight mb-8">AI Agents</h1>
         <LoadingState>Loading agents...</LoadingState>
       </div>
     );
@@ -124,8 +124,8 @@ export default function AgentsPage() {
   return (
     <div className="max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">AI Agents</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight">AI Agents</h1>
+        <p className="mt-2 text-sm text-slate-500">
           Use AI agents to automate actions like sending emails, creating Jira tickets, and generating reports
         </p>
       </div>
@@ -135,27 +135,28 @@ export default function AgentsPage() {
         {/* Email Agent */}
         <Card hover>
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
+            <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
               📧
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 mb-1">Email Agent</h3>
-              <p className="text-sm text-gray-500">Draft and send emails</p>
+              <h3 className="font-display font-bold text-slate-900 mb-1 text-sm">Email Agent</h3>
+              <p className="text-xs text-slate-500">Draft and send emails</p>
             </div>
           </div>
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  emailConnected ? "bg-green-500" : "bg-gray-300"
-                }`}
-              />
-              <span className={emailConnected ? "text-green-600" : "text-gray-500"}>
-                {emailConnected ? "Connected" : "Not configured"}
-              </span>
-            </div>
+            {emailConnected ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                Connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 flex-shrink-0" />
+                Not configured
+              </div>
+            )}
             {emailCreds?.last_used_at && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Last used: {new Date(emailCreds.last_used_at).toLocaleDateString()}
               </p>
             )}
@@ -183,27 +184,28 @@ export default function AgentsPage() {
         {/* Jira Agent */}
         <Card hover>
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-              🎫
+            <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+              🎟️
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 mb-1">Jira Agent</h3>
-              <p className="text-sm text-gray-500">Create and manage tickets</p>
+              <h3 className="font-display font-bold text-slate-900 mb-1 text-sm">Jira Agent</h3>
+              <p className="text-xs text-slate-500">Create and manage tickets</p>
             </div>
           </div>
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  jiraConnected ? "bg-green-500" : "bg-gray-300"
-                }`}
-              />
-              <span className={jiraConnected ? "text-green-600" : "text-gray-500"}>
-                {jiraConnected ? "Connected" : "Not configured"}
-              </span>
-            </div>
+            {jiraConnected ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                Connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 flex-shrink-0" />
+                Not configured
+              </div>
+            )}
             {jiraCreds?.last_used_at && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Last used: {new Date(jiraCreds.last_used_at).toLocaleDateString()}
               </p>
             )}
@@ -231,20 +233,20 @@ export default function AgentsPage() {
         {/* Report Agent */}
         <Card hover>
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
+            <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
               📊
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 mb-1">Report Generator</h3>
-              <p className="text-sm text-gray-500">Generate reports from documents</p>
+              <h3 className="font-display font-bold text-slate-900 mb-1 text-sm">Report Generator</h3>
+              <p className="text-xs text-slate-500">Generate reports from documents</p>
             </div>
           </div>
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-green-600">Always available</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+              Always available
             </div>
-            <p className="text-xs text-gray-500 mt-1">No configuration needed</p>
+            <p className="text-xs text-slate-500 mt-1">No configuration needed</p>
           </div>
           <Button
             variant="primary"
@@ -261,7 +263,7 @@ export default function AgentsPage() {
       <Card
         header={
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Actions</h2>
+            <h2 className="font-display text-sm font-bold text-slate-900">Recent Actions</h2>
             {agentHistory.length > 0 && (
               <Button
                 variant="ghost"
@@ -286,21 +288,21 @@ export default function AgentsPage() {
             description="Agent actions will appear here once you start using agents"
           />
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-200">
             {agentHistory.map((action) => (
               <div
                 key={action.id}
-                className="py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors px-1 -mx-1 rounded-lg"
               >
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div className="text-2xl flex-shrink-0">
                     {action.type === "email" && "📧"}
-                    {action.type === "jira" && "🎫"}
+                    {action.type === "jira" && "🎟️"}
                     {action.type === "report" && "📊"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-slate-900 text-sm">
                         {action.type === "email" && "Email"}
                         {action.type === "jira" && "Jira Ticket"}
                         {action.type === "report" && "Report"}
@@ -312,9 +314,9 @@ export default function AgentsPage() {
                         {action.status === "success" ? "Success" : "Failed"}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 truncate">{action.description}</p>
+                    <p className="text-xs text-slate-500 truncate">{action.description}</p>
                     {action.metadata && (
-                      <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                      <div className="mt-2 flex items-center gap-4 text-xs text-slate-400">
                         {action.metadata.ticketKey && (
                           <span>Ticket: {action.metadata.ticketKey}</span>
                         )}
@@ -326,7 +328,7 @@ export default function AgentsPage() {
                         )}
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-slate-400 mt-1">
                       {action.timestamp.toLocaleString()}
                     </p>
                   </div>
@@ -337,7 +339,7 @@ export default function AgentsPage() {
                       href={action.metadata.ticketUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 text-sm"
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                     >
                       View →
                     </a>
@@ -347,7 +349,7 @@ export default function AgentsPage() {
                       href={action.metadata.reportUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 text-sm"
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                     >
                       View →
                     </a>
